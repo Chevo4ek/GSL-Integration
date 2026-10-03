@@ -79,9 +79,9 @@ class $modify(GSLLevelCell, LevelCell) {
         float y = (diffLabel ? diffLabel->getPositionY() : diff->getPositionY() - 22.f) - 11.f;
         for (auto& e : *entries) {
             auto label = CCLabelBMFont::create(
-                fmt::format("#{} {}", e.rank, GSLManager::prettyListName(e.list)).c_str(), "goldFont.fnt"
+                fmt::format("#{} {}", e.rank, GSLManager::shortListName(e.list)).c_str(), "goldFont.fnt"
             );
-            label->limitLabelWidth(70.f, .4f, .1f);
+            label->limitLabelWidth(42.f, .4f, .1f);
             label->setColor(GSLManager::listColor(e.list));
             label->setPosition({ diff->getPositionX(), y });
             label->setID("gsl-rank"_spr);
@@ -96,16 +96,19 @@ class $modify(GSLSearchLayer, LevelSearchLayer) {
     bool init(int type) {
         if (!LevelSearchLayer::init(type)) return false;
 
-        auto spr = ButtonSprite::create("GSL", "goldFont.fnt", "GJ_button_02.png", .8f);
-        spr->setScale(.7f);
+        auto text = CCLabelBMFont::create("GSL", "goldFont.fnt");
+        text->setScale(.75f);
+        auto spr = CircleButtonSprite::create(text, CircleBaseColor::Green, CircleBaseSize::Medium);
+        spr->setScale(.8f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLSearchLayer::onGSL));
         btn->setID("gsl-button"_spr);
 
+        // в правой колонке круглых кнопок, под глобусом
         auto menu = CCMenu::create();
         menu->setID("gsl-menu"_spr);
         menu->addChild(btn);
         auto win = CCDirector::get()->getWinSize();
-        menu->setPosition({ win.width - 35.f, 35.f });
+        menu->setPosition({ win.width - 24.f, 53.f });
         this->addChild(menu, 10);
         return true;
     }

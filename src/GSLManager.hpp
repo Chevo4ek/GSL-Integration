@@ -35,6 +35,7 @@ public:
     size_t total() const { return m_all.size(); }
 
     static std::string prettyListName(std::string const& list);
+    static std::string shortListName(std::string const& list);
     static ccColor3B listColor(std::string const& list);
     static std::vector<std::string> const& lists();
 

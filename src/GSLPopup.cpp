@@ -4,7 +4,7 @@
 
 static constexpr int PER_PAGE = 10;
 static constexpr float LIST_W = 356.f;
-static constexpr float LIST_H = 220.f;
+static constexpr float LIST_H = 190.f;
 
 static std::string lower(std::string s) {
     for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -55,30 +55,31 @@ bool GSLListLayer::init() {
 
     // Вкладки списков — над рамкой, без наложения
     auto& lists = GSLManager::lists();
-    float tabGap = 92.f;
+    float tabGap = 88.f;
     float startX = win.width / 2 - tabGap * (lists.size() - 1) / 2;
     for (size_t i = 0; i < lists.size(); i++) {
         auto spr = ButtonSprite::create(
             GSLManager::prettyListName(lists[i]).c_str(), 80, true, "bigFont.fnt", "GJ_button_04.png", 24.f, .5f
         );
-        spr->setScale(.85f);
+        spr->setScale(.75f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLListLayer::onTab));
         btn->setTag(static_cast<int>(i));
-        btn->setPosition({ startX + tabGap * i, win.height - 22.f });
+        btn->setPosition({ startX + tabGap * i, win.height - 20.f });
         menu->addChild(btn);
         m_tabSprites.push_back(spr);
     }
 
     // Поиск по названию
-    m_search = TextInput::create(260.f, "Search levels...", "bigFont.fnt");
-    m_search->setPosition({ win.width / 2 - 20.f, win.height - 52.f });
+    m_search = TextInput::create(240.f, "Search levels...", "bigFont.fnt");
+    m_search->setPosition({ win.width / 2 - 18.f, win.height - 50.f });
+    m_search->setScale(.85f);
     m_search->setCallback([this](std::string const& text) { m_query = text; });
     this->addChild(m_search, 5);
 
     auto searchSpr = CCSprite::createWithSpriteFrameName("gj_findBtn_001.png");
-    searchSpr->setScale(.75f);
+    searchSpr->setScale(.6f);
     auto searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GSLListLayer::onSearch));
-    searchBtn->setPosition({ win.width / 2 + 130.f, win.height - 52.f });
+    searchBtn->setPosition({ win.width / 2 + 100.f, win.height - 50.f });
     menu->addChild(searchBtn);
 
     // Страницы
@@ -94,9 +95,9 @@ bool GSLListLayer::init() {
     menu->addChild(m_next);
 
     m_pageLabel = CCLabelBMFont::create("", "goldFont.fnt");
-    m_pageLabel->setScale(.5f);
+    m_pageLabel->setScale(.4f);
     m_pageLabel->setAnchorPoint({ 1.f, .5f });
-    m_pageLabel->setPosition({ win.width - 8.f, win.height - 52.f });
+    m_pageLabel->setPosition({ win.width - 7.f, win.height - 50.f });
     this->addChild(m_pageLabel, 5);
 
     m_status = CCLabelBMFont::create("", "bigFont.fnt");
@@ -250,6 +251,6 @@ void GSLListLayer::showLevels(CCArray* levels) {
     m_listLayer = GJListLayer::create(
         listView, GSLManager::prettyListName(m_list).c_str(), { 191, 114, 62, 255 }, LIST_W, LIST_H, 0
     );
-    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, win.height / 2 - LIST_H / 2 - 25.f });
+    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, win.height / 2 - LIST_H / 2 - 42.f });
     this->addChild(m_listLayer, 1);
 }

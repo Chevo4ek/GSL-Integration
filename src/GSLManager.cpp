@@ -183,3 +183,11 @@ std::vector<std::string> const& GSLManager::lists() {
     static std::vector<std::string> const ls = { "classic", "challenge", "spam", "future" };
     return ls;
 }
+
+std::string GSLManager::shortListName(std::string const& list) {
+    if (list == "classic") return "CL";
+    if (list == "challenge") return "CH";
+    if (list == "spam") return "SP";
+    if (list == "future") return "FC";
+    return list;
+}
