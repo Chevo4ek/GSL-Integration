@@ -125,10 +125,14 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         e.list    = v["list"].asString().unwrapOr("");
         e.name    = v["name"].asString().unwrapOr("?");
         e.author  = v["author"].asString().unwrapOr("");
+        e.difficulty = v["difficulty"].asString().unwrapOr("");
         e.rank    = static_cast<int>(v["rank"].asInt().unwrapOr(0));
         e.levelId = static_cast<int>(v["levelId"].asInt().unwrapOr(0));
         e.points  = static_cast<int>(v["points"].asInt().unwrapOr(0));
         if (e.levelId <= 0 || e.list.empty()) continue;
+        // берём только списки, которые сейчас есть на сайте
+        auto& ls = lists();
+        if (std::find(ls.begin(), ls.end(), e.list) == ls.end()) continue;
 
         m_all.push_back(e);
         m_byId[e.levelId].push_back(e);
@@ -160,7 +164,7 @@ std::string GSLManager::prettyListName(std::string const& list) {
     if (list == "classic") return "Classic";
     if (list == "challenge") return "Challenge";
     if (list == "spam") return "Spam";
-    if (list == "future") return "Future";
+    if (list == "future") return "Future Classic";
     if (list == "future_challenge") return "Future Challenge";
     if (list == "future_spam") return "Future Spam";
     if (list == "impossible") return "Impossible";
@@ -173,4 +177,9 @@ ccColor3B GSLManager::listColor(std::string const& list) {
     if (list == "spam") return { 120, 220, 255 };
     if (list == "impossible") return { 200, 120, 255 };
     return { 180, 255, 140 }; // future*
+}
+
+std::vector<std::string> const& GSLManager::lists() {
+    static std::vector<std::string> const ls = { "classic", "challenge", "spam", "future" };
+    return ls;
 }

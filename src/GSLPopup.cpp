@@ -1,12 +1,24 @@
 #include "GSLPopup.hpp"
-#include "GSLManager.hpp"
+#include <algorithm>
+#include <cctype>
 
-static std::vector<std::string> const LISTS = {
-    "classic", "challenge", "spam", "future", "future_challenge", "future_spam", "impossible"
-};
+static constexpr int PER_PAGE = 10;
+static constexpr float LIST_W = 356.f;
+static constexpr float LIST_H = 220.f;
 
-GSLPopup* GSLPopup::create() {
-    auto ret = new GSLPopup();
+static std::string lower(std::string s) {
+    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return s;
+}
+
+CCScene* GSLListLayer::scene() {
+    auto scene = CCScene::create();
+    scene->addChild(GSLListLayer::create());
+    return scene;
+}
+
+GSLListLayer* GSLListLayer::create() {
+    auto ret = new GSLListLayer();
     if (ret->init()) {
         ret->autorelease();
         return ret;
@@ -15,116 +27,229 @@ GSLPopup* GSLPopup::create() {
     return nullptr;
 }
 
-bool GSLPopup::init() {
-    if (!Popup::init(400.f, 270.f)) return false;
-    this->setTitle("Global Shitty List");
-    auto size = m_mainLayer->getContentSize();
+bool GSLListLayer::init() {
+    if (!CCLayer::init()) return false;
+    auto win = CCDirector::get()->getWinSize();
 
-    // Вкладки
-    m_tabs = CCMenu::create();
-    m_tabs->setContentSize({ size.width - 20.f, 30.f });
-    m_tabs->setLayout(RowLayout::create()->setGap(4.f)->setAutoScale(true));
-    for (size_t i = 0; i < LISTS.size(); i++) {
-        auto spr = ButtonSprite::create(
-            GSLManager::prettyListName(LISTS[i]).c_str(), "bigFont.fnt", "GJ_button_04.png", .6f
-        );
-        auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLPopup::onTab));
-        btn->setTag(static_cast<int>(i));
-        m_tabs->addChild(btn);
-    }
-    m_tabs->updateLayout();
-    m_mainLayer->addChildAtPosition(m_tabs, Anchor::Top, { 0.f, -48.f });
+    auto bg = createLayerBG();
+    bg->setColor({ 0, 102, 255 });
+    this->addChild(bg, -2);
 
-    // Список
-    m_scroll = ScrollLayer::create({ size.width - 30.f, size.height - 100.f });
-    m_scroll->m_contentLayer->setLayout(
-        ColumnLayout::create()->setAxisReverse(true)->setAxisAlignment(AxisAlignment::End)
-            ->setAutoGrowAxis(m_scroll->getContentHeight())->setGap(2.f)
+    auto menu = CCMenu::create();
+    menu->setPosition({ 0.f, 0.f });
+    this->addChild(menu, 5);
+
+    // Назад
+    auto backBtn = CCMenuItemSpriteExtra::create(
+        CCSprite::createWithSpriteFrameName("GJ_arrow_01_001.png"), this, menu_selector(GSLListLayer::onBack)
     );
-    m_mainLayer->addChildAtPosition(m_scroll, Anchor::Bottom,
-        { -m_scroll->getContentWidth() / 2, 18.f });
+    backBtn->setPosition({ 25.f, win.height - 25.f });
+    menu->addChild(backBtn);
 
-    m_status = CCLabelBMFont::create("", "goldFont.fnt");
-    m_status->setScale(.4f);
-    m_mainLayer->addChildAtPosition(m_status, Anchor::Bottom, { 0.f, 9.f });
+    // Обновить лист с сайта
+    auto refreshBtn = CCMenuItemSpriteExtra::create(
+        CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png"), this, menu_selector(GSLListLayer::onRefresh)
+    );
+    refreshBtn->setPosition({ win.width - 30.f, 30.f });
+    menu->addChild(refreshBtn);
 
-    // Кнопка "обновить сейчас"
-    auto refreshSpr = CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png");
-    refreshSpr->setScale(.6f);
-    auto refreshBtn = CCMenuItemSpriteExtra::create(refreshSpr, this, menu_selector(GSLPopup::onRefresh));
-    m_buttonMenu->addChildAtPosition(refreshBtn, Anchor::TopRight, { -20.f, -20.f });
+    // Вкладки списков — над рамкой, без наложения
+    auto& lists = GSLManager::lists();
+    float tabGap = 92.f;
+    float startX = win.width / 2 - tabGap * (lists.size() - 1) / 2;
+    for (size_t i = 0; i < lists.size(); i++) {
+        auto spr = ButtonSprite::create(
+            GSLManager::prettyListName(lists[i]).c_str(), 80, true, "bigFont.fnt", "GJ_button_04.png", 24.f, .5f
+        );
+        spr->setScale(.85f);
+        auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLListLayer::onTab));
+        btn->setTag(static_cast<int>(i));
+        btn->setPosition({ startX + tabGap * i, win.height - 22.f });
+        menu->addChild(btn);
+        m_tabSprites.push_back(spr);
+    }
 
-    selectList(m_current);
+    // Поиск по названию
+    m_search = TextInput::create(260.f, "Search levels...", "bigFont.fnt");
+    m_search->setPosition({ win.width / 2 - 20.f, win.height - 52.f });
+    m_search->setCallback([this](std::string const& text) { m_query = text; });
+    this->addChild(m_search, 5);
+
+    auto searchSpr = CCSprite::createWithSpriteFrameName("gj_findBtn_001.png");
+    searchSpr->setScale(.75f);
+    auto searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GSLListLayer::onSearch));
+    searchBtn->setPosition({ win.width / 2 + 130.f, win.height - 52.f });
+    menu->addChild(searchBtn);
+
+    // Страницы
+    auto prevSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+    m_prev = CCMenuItemSpriteExtra::create(prevSpr, this, menu_selector(GSLListLayer::onPrev));
+    m_prev->setPosition({ 25.f, win.height / 2 });
+    menu->addChild(m_prev);
+
+    auto nextSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+    nextSpr->setFlipX(true);
+    m_next = CCMenuItemSpriteExtra::create(nextSpr, this, menu_selector(GSLListLayer::onNext));
+    m_next->setPosition({ win.width - 25.f, win.height / 2 });
+    menu->addChild(m_next);
+
+    m_pageLabel = CCLabelBMFont::create("", "goldFont.fnt");
+    m_pageLabel->setScale(.5f);
+    m_pageLabel->setAnchorPoint({ 1.f, .5f });
+    m_pageLabel->setPosition({ win.width - 8.f, win.height - 52.f });
+    this->addChild(m_pageLabel, 5);
+
+    m_status = CCLabelBMFont::create("", "bigFont.fnt");
+    m_status->setScale(.5f);
+    m_status->setPosition({ win.width / 2, win.height / 2 - 20.f });
+    this->addChild(m_status, 10);
+
+    this->setKeypadEnabled(true);
+    selectList(m_list);
     return true;
 }
 
-void GSLPopup::onTab(CCObject* sender) {
-    selectList(LISTS[static_cast<size_t>(sender->getTag())]);
+void GSLListLayer::onExit() {
+    auto glm = GameLevelManager::get();
+    if (glm->m_levelManagerDelegate == this) glm->m_levelManagerDelegate = nullptr;
+    CCLayer::onExit();
 }
 
-void GSLPopup::onRefresh(CCObject*) {
+void GSLListLayer::keyBackClicked() {
+    CCDirector::get()->popSceneWithTransition(.5f, PopTransition::kPopTransitionFade);
+}
+
+void GSLListLayer::onBack(CCObject*) { keyBackClicked(); }
+
+void GSLListLayer::onTab(CCObject* sender) {
+    selectList(GSLManager::lists()[static_cast<size_t>(sender->getTag())]);
+}
+
+void GSLListLayer::onPrev(CCObject*) {
+    if (m_page > 0) { m_page--; loadPage(); }
+}
+
+void GSLListLayer::onNext(CCObject*) {
+    int total = static_cast<int>(filtered().size());
+    if ((m_page + 1) * PER_PAGE < total) { m_page++; loadPage(); }
+}
+
+void GSLListLayer::onSearch(CCObject*) {
+    m_page = 0;
+    loadPage();
+}
+
+void GSLListLayer::onRefresh(CCObject*) {
     GSLManager::get()->forceRefresh();
-    m_status->setString("Refreshing... reopen the window in a few seconds");
+    selectList(m_list);
 }
 
-void GSLPopup::selectList(std::string const& list) {
-    m_current = list;
-    auto content = m_scroll->m_contentLayer;
-    content->removeAllChildren();
+void GSLListLayer::selectList(std::string const& list) {
+    m_list = list;
+    m_page = 0;
+    m_entries = GSLManager::get()->getList(list);
 
-    auto entries = GSLManager::get()->getList(list);
-    float w = m_scroll->getContentWidth();
-
-    for (auto& e : entries) {
-        auto row = CCMenu::create();
-        row->setContentSize({ w, 26.f });
-        row->ignoreAnchorPointForPosition(false);
-
-        auto bg = CCLayerColor::create({ 0, 0, 0, 70 }, w, 26.f);
-        bg->setZOrder(-1);
-        row->addChild(bg);
-
-        auto rank = CCLabelBMFont::create(fmt::format("#{}", e.rank).c_str(), "goldFont.fnt");
-        rank->setScale(.5f);
-        rank->setAnchorPoint({ 0.f, .5f });
-        rank->setPosition({ 6.f, 13.f });
-        row->addChild(rank);
-
-        auto name = CCLabelBMFont::create(e.name.c_str(), "bigFont.fnt");
-        name->setAnchorPoint({ 0.f, .5f });
-        name->setPosition({ 50.f, 17.f });
-        name->limitLabelWidth(w - 130.f, .4f, .1f);
-        row->addChild(name);
-
-        auto author = CCLabelBMFont::create(fmt::format("by {}", e.author).c_str(), "chatFont.fnt");
-        author->setAnchorPoint({ 0.f, .5f });
-        author->setPosition({ 50.f, 6.f });
-        author->limitLabelWidth(w - 130.f, .45f, .1f);
-        author->setColor({ 200, 200, 200 });
-        row->addChild(author);
-
-        auto viewSpr = ButtonSprite::create("View", "bigFont.fnt", "GJ_button_01.png", .5f);
-        viewSpr->setScale(.6f);
-        auto view = CCMenuItemSpriteExtra::create(viewSpr, this, menu_selector(GSLPopup::onLevel));
-        view->setTag(e.levelId);
-        view->setPosition({ w - 30.f, 13.f });
-        row->addChild(view);
-
-        content->addChild(row);
+    auto& lists = GSLManager::lists();
+    for (size_t i = 0; i < lists.size(); i++) {
+        m_tabSprites[i]->updateBGImage(lists[i] == list ? "GJ_button_02.png" : "GJ_button_04.png");
     }
-    content->updateLayout();
-    m_scroll->scrollToTop();
-
-    auto mgr = GSLManager::get();
-    m_status->setString(
-        entries.empty()
-            ? (mgr->isLoading() ? "Loading..." : "No levels")
-            : fmt::format("{} levels", entries.size()).c_str()
-    );
+    loadPage();
 }
 
-void GSLPopup::onLevel(CCObject* sender) {
-    auto search = GJSearchObject::create(SearchType::Search, std::to_string(sender->getTag()));
-    auto scene = LevelBrowserLayer::scene(search);
-    CCDirector::get()->pushScene(CCTransitionFade::create(.5f, scene));
+std::vector<GSLEntry> GSLListLayer::filtered() const {
+    if (m_query.empty()) return m_entries;
+    auto q = lower(m_query);
+    std::vector<GSLEntry> out;
+    for (auto& e : m_entries) {
+        if (lower(e.name).find(q) != std::string::npos) out.push_back(e);
+    }
+    return out;
+}
+
+void GSLListLayer::loadPage() {
+    auto list = filtered();
+    int total = static_cast<int>(list.size());
+    int from = m_page * PER_PAGE;
+    int to = std::min(from + PER_PAGE, total);
+
+    m_pageLabel->setString(total == 0 ? "" : fmt::format("{} to {} of {}", from + 1, to, total).c_str());
+    m_prev->setVisible(m_page > 0);
+    m_next->setVisible(to < total);
+
+    m_pageIds.clear();
+    std::string ids;
+    for (int i = from; i < to; i++) {
+        m_pageIds.push_back(list[i].levelId);
+        if (!ids.empty()) ids += ",";
+        ids += std::to_string(list[i].levelId);
+    }
+
+    if (ids.empty()) {
+        showLevels(CCArray::create());
+        m_status->setString(
+            m_entries.empty()
+                ? (GSLManager::get()->isLoading() ? "Loading list..." : "List not loaded yet")
+                : "Nothing found"
+        );
+        return;
+    }
+
+    auto search = GJSearchObject::create(SearchType::Type19, ids);
+    m_key = search->getKey();
+
+    auto glm = GameLevelManager::get();
+    if (auto stored = glm->getStoredOnlineLevels(m_key.c_str())) {
+        showLevels(stored);
+        return;
+    }
+
+    showLevels(CCArray::create());
+    m_status->setString("Loading...");
+    glm->m_levelManagerDelegate = this;
+    glm->getOnlineLevels(search);
+}
+
+void GSLListLayer::loadLevelsFinished(CCArray* levels, char const* key, int) {
+    if (!key || m_key != key) return;
+    showLevels(levels);
+}
+
+void GSLListLayer::loadLevelsFinished(CCArray* levels, char const* key) {
+    loadLevelsFinished(levels, key, 0);
+}
+
+void GSLListLayer::loadLevelsFailed(char const* key, int) {
+    if (!key || m_key != key) return;
+    m_status->setString("Failed to load levels");
+}
+
+void GSLListLayer::loadLevelsFailed(char const* key) {
+    loadLevelsFailed(key, 0);
+}
+
+void GSLListLayer::showLevels(CCArray* levels) {
+    m_status->setString("");
+
+    // Сервер GD отдаёт уровни не по порядку — сортируем по месту в листе
+    std::vector<GJGameLevel*> sorted;
+    for (auto lvl : CCArrayExt<GJGameLevel*>(levels)) sorted.push_back(lvl);
+    auto indexOf = [this](int id) {
+        auto it = std::find(m_pageIds.begin(), m_pageIds.end(), id);
+        return static_cast<int>(it - m_pageIds.begin());
+    };
+    std::sort(sorted.begin(), sorted.end(), [&](GJGameLevel* a, GJGameLevel* b) {
+        return indexOf(a->m_levelID.value()) < indexOf(b->m_levelID.value());
+    });
+    auto arr = CCArray::create();
+    for (auto lvl : sorted) arr->addObject(lvl);
+
+    if (m_listLayer) m_listLayer->removeFromParent();
+
+    auto win = CCDirector::get()->getWinSize();
+    auto listView = CustomListView::create(arr, BoomListType::Level, LIST_H, LIST_W);
+    m_listLayer = GJListLayer::create(
+        listView, GSLManager::prettyListName(m_list).c_str(), { 191, 114, 62, 255 }, LIST_W, LIST_H, 0
+    );
+    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, win.height / 2 - LIST_H / 2 - 25.f });
+    this->addChild(m_listLayer, 1);
 }

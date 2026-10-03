@@ -12,6 +12,7 @@ struct GSLEntry {
     std::string list;     // classic, challenge, spam, future, ...
     std::string name;
     std::string author;
+    std::string difficulty; // easy_demon ... extreme_demon
     int rank = 0;
     int levelId = 0;
     int points = 0;
@@ -35,6 +36,7 @@ public:
 
     static std::string prettyListName(std::string const& list);
     static ccColor3B listColor(std::string const& list);
+    static std::vector<std::string> const& lists();
 
 private:
     void tick(float);
