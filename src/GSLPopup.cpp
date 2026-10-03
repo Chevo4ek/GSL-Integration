@@ -674,9 +674,9 @@ void GSLListLayer::updateListButton() {
 
 void GSLListLayer::onInfo(CCObject*) {
     std::string text =
-        "The <cg>Global Shitty List</c> is a <cy>community</c> ranking of "
-        "<cr>Classic</c>, <cr>Challenge</c>, <cl>Spam</c> and <cg>Future Classic</c> levels.\n"
-        "Full list, records and victors are on <cl>globalshittylist.com</c>.";
+        "The <cr>hardest</c> shitty levels,\nranked by the <cy>community</c>.\n"
+        "Track <cg>records</c>, discover <cl>victors</c> and climb the <co>leaderboard</c> "
+        "of the Geometry Dash shitty-level scene.";
     bool future = m_list == "future";
     if (future) {
         text += "\n\n<co>FUTURE CLASSIC:</c> only levels that already have a "
