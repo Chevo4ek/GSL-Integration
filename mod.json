@@ -62,6 +62,17 @@
 				"Future Classic"
 			]
 		},
+		"search-bar-mode": {
+			"name": "Search bar",
+			"description": "<cy>Hide on scroll</c> — the search bar hides when you scroll down, a small arrow opens and closes it.\n<cy>Arrow only</c> — hidden until you press the arrow.\n<cy>Always shown</c> — always visible, no arrow.",
+			"type": "string",
+			"default": "Hide on scroll",
+			"one-of": [
+				"Hide on scroll",
+				"Arrow only",
+				"Always shown"
+			]
+		},
 		"show-gsl-button": {
 			"name": "Show GSL button",
 			"description": "Show the round GSL button in the level search screen. <cr>Without it the GSL screen can't be opened.</c>",

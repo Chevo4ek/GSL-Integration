@@ -73,6 +73,20 @@ protected:
     CCScale9Sprite* m_filterBg = nullptr;
     CCMenuItemSpriteExtra* m_listBtn = nullptr;
     CCMenu* m_menu = nullptr;
+
+    // Прячущийся поиск (настройка search-bar-mode)
+    CCNode* m_searchStrip = nullptr;
+    CCMenuItemSpriteExtra* m_searchToggle = nullptr;
+    Ref<CCArray> m_shownLevels;
+    bool m_searchHidden = false;
+    bool m_searchAnimating = false;
+    float m_lastScrollY = 0.f;
+    float m_scrollAccum = 0.f;
+    std::string searchMode() const;
+    void setSearchHidden(bool hidden);
+    void onToggleSearch(CCObject*);
+    void rebuildListView(bool keepScroll);
+    void update(float dt) override;
     void updateListButton();
     CCLabelBMFont* m_pageBtnLabel = nullptr;
     CCMenuItemSpriteExtra* m_prev = nullptr;
