@@ -89,6 +89,46 @@
 			"type": "bool",
 			"default": true
 		},
+		"bg-title": {
+			"type": "title",
+			"name": "Background"
+		},
+		"bg-blur": {
+			"name": "Background blur",
+			"description": "How much the level screenshots behind the list are blurred. <cy>0</c> = sharp.",
+			"type": "int",
+			"default": 0,
+			"min": 0,
+			"max": 10,
+			"control": {
+				"slider": true,
+				"arrows": true
+			}
+		},
+		"bg-darken": {
+			"name": "Background darkening (%)",
+			"description": "How much the level screenshots are darkened so the list is easier to read. <cy>0</c> = original brightness.",
+			"type": "int",
+			"default": 40,
+			"min": 0,
+			"max": 90,
+			"control": {
+				"slider": true,
+				"arrows": true
+			}
+		},
+		"bg-interval": {
+			"name": "Background change (seconds)",
+			"description": "How often the background screenshot changes.",
+			"type": "int",
+			"default": 30,
+			"min": 5,
+			"max": 300,
+			"control": {
+				"slider": true,
+				"arrows": true
+			}
+		},
 		"sync-title": {
 			"type": "title",
 			"name": "Sync"

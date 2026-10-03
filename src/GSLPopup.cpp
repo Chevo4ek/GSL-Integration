@@ -938,12 +938,42 @@ void GSLListLayer::setupBackgrounds() {
     m_bgSprite = makeBackground(m_bgFiles[m_bgIndex]);
     if (m_bgSprite) this->addChild(m_bgSprite, -1);
     if (m_bgFiles.size() > 1) {
-        this->schedule(schedule_selector(GSLListLayer::nextBackground), 30.f);
+        auto interval = static_cast<float>(Mod::get()->getSettingValue<int64_t>("bg-interval"));
+        this->schedule(schedule_selector(GSLListLayer::nextBackground), std::max(5.f, interval));
     }
 }
 
-// Картинка на весь экран (обрезается по краям, без растягивания), чуть затемнена,
-// чтобы кнопки и список читались
+// Размытие без шейдеров: картинку по шагам уменьшаем в 2 раза (с плавной
+// фильтрацией), потом растягиваем обратно на весь экран — получается мягкий блюр
+static CCSprite* blurSprite(CCSprite* src, int level) {
+    auto win = CCDirector::get()->getWinSize();
+    float target = 1.f + level * 1.5f; // во сколько раз уменьшить
+    CCSprite* cur = src;
+    CCSize size = win;
+    float total = 1.f;
+    while (total < target - .01f) {
+        float step = std::min(2.f, target / total);
+        size = CCSize(std::max(1.f, size.width / step), std::max(1.f, size.height / step));
+        auto rt = CCRenderTexture::create(static_cast<int>(size.width), static_cast<int>(size.height));
+        if (!rt) return src;
+        cur->setScale(cur->getScale() / step);
+        cur->setPosition(size / 2);
+        rt->begin();
+        cur->visit();
+        rt->end();
+        auto next = CCSprite::createWithTexture(rt->getSprite()->getTexture());
+        next->setFlipY(true);
+        next->getTexture()->setAntiAliasTexParameters();
+        cur = next;
+        total *= step;
+    }
+    cur->setScale(total);
+    cur->setPosition(win / 2);
+    return cur;
+}
+
+// Картинка на весь экран (обрезается по краям, без растягивания);
+// размытие и затемнение — из настроек
 CCSprite* GSLListLayer::makeBackground(std::string const& file) {
     auto spr = CCSprite::create(file.c_str());
     if (!spr) return nullptr;
@@ -951,7 +981,14 @@ CCSprite* GSLListLayer::makeBackground(std::string const& file) {
     auto size = spr->getContentSize();
     spr->setScale(std::max(win.width / size.width, win.height / size.height));
     spr->setPosition(win / 2);
-    spr->setColor({ 150, 150, 150 });
+    spr->getTexture()->setAntiAliasTexParameters();
+
+    auto blur = static_cast<int>(Mod::get()->getSettingValue<int64_t>("bg-blur"));
+    if (blur > 0) spr = blurSprite(spr, std::clamp(blur, 0, 10));
+
+    auto darken = std::clamp(static_cast<int>(Mod::get()->getSettingValue<int64_t>("bg-darken")), 0, 90);
+    auto c = static_cast<GLubyte>(255 * (100 - darken) / 100);
+    spr->setColor({ c, c, c });
     return spr;
 }
 

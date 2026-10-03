@@ -28,6 +28,7 @@
 - Rank names (short / full), list rate, song name trimming
 - Default list, GSL button on/off with a reminder when it's hidden
 - Search bar mode: hide on scroll, arrow only or always shown
+- Background: blur, darkening and how often the screenshot changes
 - Check interval and notifications about list updates
 
 ### Platforms
