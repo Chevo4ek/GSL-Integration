@@ -4,8 +4,8 @@
 
 static constexpr int PER_PAGE = 10;
 static constexpr float LIST_W = 356.f;
-static constexpr float LIST_H = 215.f;
-static constexpr float LIST_SHIFT_X = 22.f;
+static constexpr float LIST_H = 200.f;
+static constexpr float LIST_SHIFT_X = 0.f;
 
 static std::string lower(std::string s) {
     for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -55,7 +55,8 @@ bool GSLListLayer::init() {
     menu->addChild(refreshBtn);
 
     // Рамка листа: по центру, чуть ниже середины
-    float listBottom = 16.f;
+    // всё вместе (рамка + шапка + поиск) — по центру экрана
+    float listBottom = (win.height - (LIST_H + 79.f)) / 2 + 16.f;
     float listTop = listBottom + LIST_H + 30.f; // вместе с зелёной шапкой
 
     // Вкладки списков — столбиком слева
@@ -68,14 +69,14 @@ bool GSLListLayer::init() {
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLListLayer::onTab));
         btn->setTag(static_cast<int>(i));
         float tabsTop = win.height / 2 + 26.f * (lists.size() - 1) / 2 + 30.f;
-        btn->setPosition({ 62.f, tabsTop - 26.f * i });
+        btn->setPosition({ 38.f, tabsTop - 26.f * i });
         menu->addChild(btn);
         m_tabSprites.push_back(spr);
     }
 
     // Пояснение для Future Classic (видно только на этой вкладке)
     m_note = CCNode::create();
-    m_note->setPosition({ 62.f, win.height / 2 + 26.f * (lists.size() - 1) / 2 + 30.f - 26.f * lists.size() - 6.f });
+    m_note->setPosition({ 38.f, win.height / 2 + 26.f * (lists.size() - 1) / 2 + 30.f - 26.f * lists.size() - 6.f });
     {
         char const* lines[] = { "Only levels with", "a GD ID are shown.", "Full list on site:" };
         float y = 0.f;
@@ -97,8 +98,8 @@ bool GSLListLayer::init() {
 
     // Поиск — во всю ширину рамки, сразу над ней
     float searchY = listTop + 18.f;
-    m_search = TextInput::create(LIST_W - 34.f, "Search levels...", "bigFont.fnt");
-    m_search->setPosition({ win.width / 2 + LIST_SHIFT_X - 17.f, searchY });
+    m_search = TextInput::create(LIST_W - 64.f, "Search levels...", "bigFont.fnt");
+    m_search->setPosition({ win.width / 2 + LIST_SHIFT_X - 32.f, searchY });
     m_search->setCallback([this](std::string const& text) { m_query = text; });
     this->addChild(m_search, 5);
 
@@ -108,17 +109,31 @@ bool GSLListLayer::init() {
     searchBtn->setPosition({ win.width / 2 + LIST_SHIFT_X + LIST_W / 2 - 15.f, searchY });
     menu->addChild(searchBtn);
 
+    // Фильтр (воронка) слева от лупы: скрыть пройденные уровни
+    m_filterBg = CCScale9Sprite::create("GJ_button_01.png");
+    m_filterBg->setContentSize({ 40.f, 40.f });
+    if (auto funnel = CCSprite::createWithSpriteFrameName("GJ_filterIcon_001.png")) {
+        funnel->setScale(.75f);
+        funnel->setPosition({ 20.f, 21.f });
+        m_filterBg->addChild(funnel);
+    }
+    m_filterBg->setScale(searchSpr->getScaledContentHeight() / 40.f);
+    auto filterBtn = CCMenuItemSpriteExtra::create(m_filterBg, this, menu_selector(GSLListLayer::onFilter));
+    filterBtn->setPosition({ searchBtn->getPositionX() - searchSpr->getScaledContentWidth() - 4.f, searchY });
+    menu->addChild(filterBtn);
+
     // Страницы
     auto prevSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
-    prevSpr->setScale(.7f);
+    prevSpr->setScale(.6f);
     m_prev = CCMenuItemSpriteExtra::create(prevSpr, this, menu_selector(GSLListLayer::onPrev));
-    m_prev->setPosition({ win.width / 2 + LIST_SHIFT_X - LIST_W / 2 - 22.f, 16.f + LIST_H / 2 });
+    m_prev->setPosition({ win.width / 2 - LIST_W / 2 - 24.f, listBottom + LIST_H / 2 });
     menu->addChild(m_prev);
 
     auto nextSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
     nextSpr->setFlipX(true);
+    nextSpr->setScale(.6f);
     m_next = CCMenuItemSpriteExtra::create(nextSpr, this, menu_selector(GSLListLayer::onNext));
-    m_next->setPosition({ win.width - 25.f, win.height / 2 });
+    m_next->setPosition({ win.width / 2 + LIST_W / 2 + 24.f, listBottom + LIST_H / 2 });
     menu->addChild(m_next);
 
     m_pageLabel = CCLabelBMFont::create("", "goldFont.fnt");
@@ -129,7 +144,7 @@ bool GSLListLayer::init() {
 
     m_status = CCLabelBMFont::create("", "bigFont.fnt");
     m_status->setScale(.5f);
-    m_status->setPosition({ win.width / 2 + LIST_SHIFT_X, 16.f + LIST_H / 2 });
+    m_status->setPosition({ win.width / 2, listBottom + LIST_H / 2 });
     this->addChild(m_status, 10);
 
     this->setKeypadEnabled(true);
@@ -189,12 +204,27 @@ void GSLListLayer::onSite(CCObject*) {
     web::openLinkInBrowser("https://globalshittylist.com");
 }
 
+void GSLListLayer::onFilter(CCObject*) {
+    m_hideCompleted = !m_hideCompleted;
+    // серая кнопка = фильтр включён
+    m_filterBg->setColor(m_hideCompleted ? ccColor3B{ 150, 150, 150 } : ccColor3B{ 255, 255, 255 });
+    m_page = 0;
+    loadPage();
+    if (m_hideCompleted && filtered().empty()) m_status->setString("All levels completed!");
+}
+
+static bool isCompleted(int id) {
+    auto saved = GameLevelManager::get()->getSavedLevel(id);
+    return saved && saved->m_normalPercent.value() >= 100;
+}
+
 std::vector<GSLEntry> GSLListLayer::filtered() const {
-    if (m_query.empty()) return m_entries;
     auto q = lower(m_query);
     std::vector<GSLEntry> out;
     for (auto& e : m_entries) {
-        if (lower(e.name).find(q) != std::string::npos) out.push_back(e);
+        if (!q.empty() && lower(e.name).find(q) == std::string::npos) continue;
+        if (m_hideCompleted && isCompleted(e.levelId)) continue;
+        out.push_back(e);
     }
     return out;
 }
@@ -283,6 +313,6 @@ void GSLListLayer::showLevels(CCArray* levels) {
     m_listLayer = GJListLayer::create(
         listView, GSLManager::prettyListName(m_list).c_str(), { 191, 114, 62, 255 }, LIST_W, LIST_H, 0
     );
-    m_listLayer->setPosition({ win.width / 2 + LIST_SHIFT_X - LIST_W / 2, 16.f });
+    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, (CCDirector::get()->getWinSize().height - (LIST_H + 79.f)) / 2 + 16.f });
     this->addChild(m_listLayer, 1);
 }

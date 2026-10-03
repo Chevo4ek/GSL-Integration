@@ -31,6 +31,7 @@ protected:
     void onSearch(CCObject*);
     void onRefresh(CCObject*);
     void onSite(CCObject*);
+    void onFilter(CCObject*);
 
     void selectList(std::string const& list);
     void loadPage();
@@ -49,6 +50,8 @@ protected:
     CCLabelBMFont* m_pageLabel = nullptr;
     CCLabelBMFont* m_status = nullptr;
     CCNode* m_note = nullptr;
+    CCScale9Sprite* m_filterBg = nullptr;
+    bool m_hideCompleted = false;
     CCMenuItemSpriteExtra* m_prev = nullptr;
     CCMenuItemSpriteExtra* m_next = nullptr;
     std::vector<ButtonSprite*> m_tabSprites;
