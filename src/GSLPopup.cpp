@@ -196,11 +196,9 @@ protected:
     GSLListLayer* m_layer = nullptr;
     int m_rank = 0;
     int m_lengthMask = 0;
-    bool m_rated = false, m_unrated = false, m_completedBy = false, m_createdBy = false;
+    bool m_completedBy = false, m_createdBy = false;
     std::vector<std::pair<int, CCLabelBMFont*>> m_rankLabels;
     std::vector<std::pair<int, CCLabelBMFont*>> m_lengthLabels;
-    CCMenuItemToggler* m_ratedToggle = nullptr;
-    CCMenuItemToggler* m_unratedToggle = nullptr;
     TextInput* m_victorInput = nullptr;
     TextInput* m_creatorInput = nullptr;
 
@@ -290,8 +288,6 @@ protected:
         this->setTitle("Search Filters", "goldFont.fnt", .9f);
         m_rank = m_layer->m_rankLimit;
         m_lengthMask = m_layer->m_lengthMask;
-        m_rated = m_layer->m_rated;
-        m_unrated = m_layer->m_unrated;
         m_completedBy = m_layer->m_completedBy;
         m_createdBy = m_layer->m_onlyCreator;
 
@@ -319,17 +315,13 @@ protected:
         checks->setContentSize({ boxW, boxH });
         m_mainLayer->addChildAtPosition(checks, Anchor::Top, { 0.f, -180.f });
         float rowTop = boxH - 20.f, rowBottom = 20.f;
-        addCheck(checks, 22.f, rowTop, "Rated", m_rated, menu_selector(GSLFilterPopup::onRated),
-            "Only levels that are <cy>rated</c> in GD.", &m_ratedToggle);
-        addCheck(checks, 22.f, rowBottom, "Unrated", m_unrated, menu_selector(GSLFilterPopup::onUnrated),
-            "Only levels that are <cr>not rated</c> in GD.", &m_unratedToggle);
-        addCheck(checks, 140.f, rowTop, "Completed By", m_completedBy, menu_selector(GSLFilterPopup::onCompleted),
+        addCheck(checks, 40.f, rowTop, "Completed By", m_completedBy, menu_selector(GSLFilterPopup::onCompleted),
             "Only levels this player has beaten (victors on the site).\nEmpty name = <cg>your</c> account.");
-        addCheck(checks, 140.f, rowBottom, "Created By", m_createdBy, menu_selector(GSLFilterPopup::onCreated),
+        addCheck(checks, 40.f, rowBottom, "Created By", m_createdBy, menu_selector(GSLFilterPopup::onCreated),
             "Only levels made by this creator.");
 
-        float inputW = 110.f;
-        float inputX = boxW / 2 - inputW / 2 - 12.f;
+        float inputW = 150.f;
+        float inputX = boxW / 2 - inputW / 2 - 30.f;
         m_victorInput = TextInput::create(inputW, "Username", "bigFont.fnt");
         m_victorInput->setString(m_layer->m_victor);
         m_mainLayer->addChildAtPosition(m_victorInput, Anchor::Top, { inputX, -180.f + boxH / 2 - 20.f });
@@ -390,15 +382,6 @@ protected:
     }
     void onLengthGear(CCObject*) { openCustomLength(); }
 
-    // Rated и Unrated вместе не имеют смысла — включаем только одно
-    void onRated(CCObject*) {
-        m_rated = !m_rated;
-        if (m_rated && m_unrated) { m_unrated = false; m_unratedToggle->toggle(false); }
-    }
-    void onUnrated(CCObject*) {
-        m_unrated = !m_unrated;
-        if (m_rated && m_unrated) { m_rated = false; m_ratedToggle->toggle(false); }
-    }
     void onCompleted(CCObject*) { m_completedBy = !m_completedBy; }
     void onCreated(CCObject*) { m_createdBy = !m_createdBy; }
 
@@ -410,8 +393,6 @@ protected:
     void onApply(CCObject*) {
         m_layer->m_rankLimit = m_rank;
         m_layer->m_lengthMask = m_lengthMask;
-        m_layer->m_rated = m_rated;
-        m_layer->m_unrated = m_unrated;
         m_layer->m_completedBy = m_completedBy;
         m_layer->m_victor = m_victorInput->getString();
         m_layer->m_onlyCreator = m_createdBy;
@@ -659,7 +640,7 @@ void GSLListLayer::onSite(CCObject*) {
 void GSLListLayer::onFilter(CCObject*) { GSLFilterPopup::create(this)->show(); }
 
 void GSLListLayer::applyFilters() {
-    bool active = m_rankLimit > 0 || m_lengthMask != 0 || m_rated || m_unrated || m_completedBy
+    bool active = m_rankLimit > 0 || m_lengthMask != 0 || m_completedBy
         || (m_onlyCreator && !m_creator.empty());
     // серая воронка = фильтр включён
     m_filterBg->setColor(active ? ccColor3B{ 150, 150, 150 } : ccColor3B{ 255, 255, 255 });
@@ -690,8 +671,6 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
             auto info = gsl->gdInfo(e.levelId);
             if (!info) continue;
             if (m_lengthMask && (info->length < 0 || !(m_lengthMask & (1 << info->length)))) continue;
-            if (m_rated && !m_unrated && info->stars <= 0) continue;
-            if (m_unrated && !m_rated && info->stars > 0) continue;
         }
         out.push_back(e);
     }
@@ -699,7 +678,7 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
 }
 
 void GSLListLayer::loadPage() {
-    // для длины и Rated/Unrated нужны данные с серверов GD — докачиваем недостающие
+    // для фильтра по длине нужны данные с серверов GD — докачиваем недостающие
     if (needsGDInfo()) {
         auto gsl = GSLManager::get();
         std::vector<int> missing;
