@@ -986,19 +986,25 @@ static CCSprite* blurSprite(CCSprite* src, int level) {
         size = CCSize(std::max(1.f, size.width / step), std::max(1.f, size.height / step));
         auto rt = CCRenderTexture::create(static_cast<int>(size.width), static_cast<int>(size.height));
         if (!rt) return src;
-        // CCRenderTexture снимает область вокруг центра экрана — ставим картинку туда
+        // в CCRenderTexture начало координат — левый нижний угол текстуры
         cur->setScale(cur->getScale() / step);
-        cur->setPosition(win / 2);
+        cur->setPosition(size / 2);
         rt->begin();
         cur->visit();
         rt->end();
-        auto next = CCSprite::createWithTexture(rt->getSprite()->getTexture());
+        // берём ровно нарисованную часть (текстура может быть больше, если степень двойки)
+        auto rtSpr = rt->getSprite();
+        auto next = CCSprite::createWithTexture(rtSpr->getTexture(), rtSpr->getTextureRect());
         next->setFlipY(true);
         next->getTexture()->setAntiAliasTexParameters();
         cur = next;
         total *= step;
     }
-    cur->setScale(total);
+    // растягиваем обратно чуть больше экрана: края размытой картинки
+    // смешиваются с пустотой, пусть они уходят за экран
+    auto cs = cur->getContentSize();
+    float cover = std::max(win.width / cs.width, win.height / cs.height);
+    cur->setScale(cover * (1.f + .015f * level));
     cur->setPosition(win / 2);
     return cur;
 }

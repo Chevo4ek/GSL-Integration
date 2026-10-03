@@ -15,7 +15,7 @@
 - Real level cards, 10 per page, sorted by list position
 - Level screenshots in the background, smoothly changing every 30 seconds
 - The level list always has its own blue background and separator lines (doesn't depend on texture packs)
-- Fixed: blurred background was shifted and showed blue corners
+- Fixed: blurred background showed blue edges and corners
 - Search by level name — search bar is part of the list frame, like in the game's own lists
 - The list frame is no longer recreated on every page, so the search text stays
 - Search bar smoothly hides when you scroll down; a small arrow opens and closes it
