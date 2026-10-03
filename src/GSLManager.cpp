@@ -129,6 +129,23 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         e.rank    = static_cast<int>(v["rank"].asInt().unwrapOr(0));
         e.levelId = static_cast<int>(v["levelId"].asInt().unwrapOr(0));
         e.points  = static_cast<int>(v["points"].asInt().unwrapOr(0));
+        // victors: строки или объекты — берём ник из любого подходящего поля
+        if (auto vs = v["victors"].asArray()) {
+            for (auto& vic : vs.unwrap()) {
+                std::string name;
+                if (vic.isString()) name = vic.asString().unwrapOr("");
+                else if (vic.isObject()) {
+                    for (auto key : { "name", "username", "player", "user", "victor" }) {
+                        if (!vic.contains(key)) continue;
+                        auto& f = vic[key];
+                        if (f.isString()) name = f.asString().unwrapOr("");
+                        else if (f.isObject()) name = f["name"].asString().unwrapOr("");
+                        if (!name.empty()) break;
+                    }
+                }
+                if (!name.empty()) e.victors.push_back(name);
+            }
+        }
         if (e.levelId <= 0 || e.list.empty()) continue;
         // берём только списки, которые сейчас есть на сайте
         auto& ls = lists();
@@ -140,6 +157,17 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
 }
 
 void GSLManager::loadCache() {
+    auto gd = Mod::get()->getSavedValue<matjson::Value>("gd-info");
+    if (gd.isObject()) {
+        for (auto& val : gd) {
+            auto key = val.getKey().value_or("0");
+            GDInfo info;
+            info.length = static_cast<int>(val[0].asInt().unwrapOr(-1));
+            info.stars = static_cast<int>(val[1].asInt().unwrapOr(0));
+            m_gd[std::atoi(key.c_str())] = info;
+        }
+    }
+
     auto cached = Mod::get()->getSavedValue<matjson::Value>("cache-levels");
     if (cached.isArray()) {
         applyLevels(cached);
@@ -190,4 +218,97 @@ std::string GSLManager::shortListName(std::string const& list) {
     if (list == "spam") return "SP";
     if (list == "future") return "FC";
     return list;
+}
+
+// ---------- длина и звёзды с серверов GD ----------
+
+GDInfo const* GSLManager::gdInfo(int levelId) const {
+    auto it = m_gd.find(levelId);
+    return it == m_gd.end() ? nullptr : &it->second;
+}
+
+void GSLManager::rememberLevel(GJGameLevel* level) {
+    if (!level) return;
+    GDInfo info;
+    info.length = level->isPlatformer() ? 5 : static_cast<int>(level->m_levelLength);
+    info.stars = level->m_stars.value();
+    m_gd[level->m_levelID.value()] = info;
+}
+
+void GSLManager::saveGDInfo() {
+    auto obj = matjson::Value::object();
+    for (auto& [id, info] : m_gd) {
+        if (info.length < 0) continue;
+        auto arr = matjson::Value::array();
+        arr.push(info.length);
+        arr.push(info.stars);
+        obj[std::to_string(id)] = arr;
+    }
+    Mod::get()->setSavedValue("gd-info", obj);
+}
+
+void GSLManager::requestGDInfo(std::vector<int> const& ids, std::function<void()> done) {
+    for (int id : ids) {
+        if (m_gd.contains(id)) continue;
+        if (std::find(m_gdQueue.begin(), m_gdQueue.end(), id) == m_gdQueue.end()) m_gdQueue.push_back(id);
+    }
+    if (done) m_gdCallbacks.push_back(std::move(done));
+    if (!m_gdLoading) fetchGDChunk();
+}
+
+// По 50 уровней за запрос, по очереди — чтобы не долбить сервер GD
+void GSLManager::fetchGDChunk() {
+    if (m_gdQueue.empty()) {
+        m_gdLoading = false;
+        saveGDInfo();
+        auto callbacks = std::move(m_gdCallbacks);
+        m_gdCallbacks.clear();
+        for (auto& cb : callbacks) cb();
+        return;
+    }
+    m_gdLoading = true;
+
+    size_t n = std::min<size_t>(50, m_gdQueue.size());
+    std::vector<int> chunk(m_gdQueue.begin(), m_gdQueue.begin() + n);
+    m_gdQueue.erase(m_gdQueue.begin(), m_gdQueue.begin() + n);
+
+    std::string ids;
+    for (int id : chunk) {
+        if (!ids.empty()) ids += ",";
+        ids += std::to_string(id);
+    }
+
+    auto req = web::WebRequest();
+    req.userAgent("");
+    req.bodyString(fmt::format("gameVersion=22&binaryVersion=47&type=19&str={}&secret=Wmfd2893gb7", ids));
+    req.header("Content-Type", "application/x-www-form-urlencoded");
+
+    m_gdListener.spawn(
+        req.post("https://www.boomlings.com/database/getGJLevels21.php"),
+        [this, chunk](web::WebResponse res) {
+            auto body = res.ok() ? res.string().unwrapOr("") : std::string();
+            if (body.empty() || body[0] == '-') log::warn("GSL: GD level info request failed ({})", res.code());
+
+            // "1:id:...:15:length:...:18:stars|..." # остальное
+            auto levels = std::string(body.substr(0, body.find('#')));
+            for (auto& lvl : utils::string::split(levels, "|")) {
+                auto parts = utils::string::split(lvl, ":");
+                int id = 0;
+                GDInfo info;
+                for (size_t i = 0; i + 1 < parts.size(); i += 2) {
+                    auto& k = parts[i];
+                    int v = std::atoi(parts[i + 1].c_str());
+                    if (k == "1") id = v;
+                    else if (k == "15") info.length = v;
+                    else if (k == "18") info.stars = v;
+                }
+                if (id > 0) m_gd[id] = info;
+            }
+            // уровни, которых сервер не вернул (или запрос не прошёл), помечаем как неизвестные,
+            // чтобы не спрашивать по кругу. На диск неизвестные не сохраняются.
+            for (int id : chunk) if (!m_gd.contains(id)) m_gd[id] = GDInfo{};
+
+            Loader::get()->queueInMainThread([this] { fetchGDChunk(); });
+        }
+    );
 }

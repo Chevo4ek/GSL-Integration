@@ -6,3 +6,4 @@
 - Demon faces and difficulty from the list
 - GSL screen with tabs, pages and search
 - Automatic sync with globalshittylist.com
+- Search filters: list position, length, rated/unrated, completed by, created by

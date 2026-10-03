@@ -9,3 +9,6 @@ Brings the **[Global Shitty List](https://globalshittylist.com)** right into Geo
 - **Live sync** — the list updates automatically when the site's database changes
 
 Short tags: **CL** — Classic, **CH** — Challenge, **SP** — Spam, **FC** — Future Classic.
+
+## Credits
+Randomizer button sprite — from [Integrated Demonlist](https://github.com/hiimjustin000/IntegratedDemonlist) by hiimjasmine00 (MIT).
