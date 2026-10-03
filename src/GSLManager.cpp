@@ -102,8 +102,12 @@ void GSLManager::fetchPage(int offset) {
             for (auto& v : m_pending) all.push(v);
             m_pending.clear();
 
+            bool hadList = !m_all.empty();
             applyLevels(all);
             m_version = m_pendingVersion;
+            if (hadList && Mod::get()->getSettingValue<bool>("notify-updates")) {
+                Notification::create("Global Shitty List updated", NotificationIcon::Info)->show();
+            }
             Mod::get()->setSavedValue("cache-levels", all);
             Mod::get()->setSavedValue("cache-version", m_version);
             m_loading = false;
@@ -129,6 +133,17 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         e.rank    = static_cast<int>(v["rank"].asInt().unwrapOr(0));
         e.levelId = static_cast<int>(v["levelId"].asInt().unwrapOr(0));
         e.points  = static_cast<int>(v["points"].asInt().unwrapOr(0));
+        // rate: число или строка — показываем как есть, без лишних нулей
+        if (v.contains("rate")) {
+            auto& r = v["rate"];
+            if (r.isString()) e.rate = r.asString().unwrapOr("");
+            else if (r.isNumber()) {
+                auto num = r.asDouble().unwrapOr(0.0);
+                e.rate = fmt::format("{:.2f}", num);
+                while (!e.rate.empty() && e.rate.back() == '0') e.rate.pop_back();
+                if (!e.rate.empty() && e.rate.back() == '.') e.rate.pop_back();
+            }
+        }
         // victors: строки или объекты — берём ник из любого подходящего поля
         if (auto vs = v["victors"].asArray()) {
             for (auto& vic : vs.unwrap()) {

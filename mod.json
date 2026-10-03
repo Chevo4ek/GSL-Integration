@@ -14,6 +14,70 @@
 		]
 	},
 	"settings": {
+		"display-title": {
+			"type": "title",
+			"name": "Display"
+		},
+		"rank-names": {
+			"name": "Rank names",
+			"description": "How list positions are written: <cy>Short</c> = #1 CL, <cy>Full</c> = #1 Classic.",
+			"type": "string",
+			"default": "Short",
+			"one-of": [
+				"Short",
+				"Full"
+			]
+		},
+		"replace-face": {
+			"name": "Replace difficulty face",
+			"description": "Show the demon face and difficulty from the list instead of the in-game one. Turn off to keep the real in-game difficulty.",
+			"type": "bool",
+			"default": true
+		},
+		"show-rate": {
+			"name": "Show list rate",
+			"description": "Show the level's <cy>rate</c> from the Global Shitty List in level search and on the level page.",
+			"type": "bool",
+			"default": true
+		},
+		"trim-song-name": {
+			"name": "Shorten song name",
+			"description": "Shrink long song names in level search so they don't go over the level preview.",
+			"type": "bool",
+			"default": true
+		},
+		"list-title": {
+			"type": "title",
+			"name": "List screen"
+		},
+		"default-list": {
+			"name": "Default list",
+			"description": "Which list opens first on the GSL screen.",
+			"type": "string",
+			"default": "Classic",
+			"one-of": [
+				"Classic",
+				"Challenge",
+				"Spam",
+				"Future Classic"
+			]
+		},
+		"show-gsl-button": {
+			"name": "Show GSL button",
+			"description": "Show the round GSL button in the level search screen. <cr>Without it the GSL screen can't be opened.</c>",
+			"type": "bool",
+			"default": true
+		},
+		"hidden-button-reminder": {
+			"name": "Remind when button is hidden",
+			"description": "When the GSL button is hidden, show a reminder on every game start that it needs to be turned on.",
+			"type": "bool",
+			"default": true
+		},
+		"sync-title": {
+			"type": "title",
+			"name": "Sync"
+		},
 		"poll-interval": {
 			"name": "Check interval (seconds)",
 			"description": "How often to check the site for changes",
@@ -22,9 +86,9 @@
 			"min": 20,
 			"max": 600
 		},
-		"replace-face": {
-			"name": "Replace difficulty face",
-			"description": "Show the demon face and difficulty from the list instead of the in-game one. Turn off to keep the real in-game difficulty.",
+		"notify-updates": {
+			"name": "Notify about list updates",
+			"description": "Show a notification in game when the Global Shitty List changes on the site.",
 			"type": "bool",
 			"default": true
 		}

@@ -13,6 +13,20 @@ class $modify(GSLMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
         GSLManager::get()->start(); // повторный вызов ничего не делает
+
+        // кнопка GSL спрятана — напоминаем один раз за запуск игры
+        static bool reminded = false;
+        auto mod = Mod::get();
+        if (!reminded && !mod->getSettingValue<bool>("show-gsl-button")
+            && mod->getSettingValue<bool>("hidden-button-reminder")) {
+            reminded = true;
+            Loader::get()->queueInMainThread([] {
+                Notification::create(
+                    "GSL button is hidden - turn it on in the mod settings to open the list",
+                    NotificationIcon::Warning, 4.f
+                )->show();
+            });
+        }
         return true;
     }
 };
@@ -130,7 +144,8 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     float lineH = fullNames ? 14.f : 9.f;
     float y = bottom - (fullNames ? 7.f : 6.f);
     for (auto& e : entries) {
-        auto str = fullNames
+        bool full = Mod::get()->getSettingValue<std::string>("rank-names") == "Full";
+        auto str = full
             ? fmt::format("#{} {}", e.rank, GSLManager::prettyListName(e.list))
             : fmt::format("#{} {}", e.rank, GSLManager::shortListName(e.list));
         auto label = CCLabelBMFont::create(str.c_str(), "goldFont.fnt");
@@ -141,6 +156,18 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         label->setID("gsl-rank"_spr);
         parent->addChild(label, 10);
         y -= lineH;
+    }
+
+    if (fullNames && Mod::get()->getSettingValue<bool>("show-rate")) {
+        for (auto& e : entries) {
+            if (e.rate.empty()) continue;
+            auto rate = CCLabelBMFont::create(fmt::format("Rate: {}", e.rate).c_str(), "goldFont.fnt");
+            rate->limitLabelWidth(110.f, .45f, .1f);
+            rate->setPosition(parent->convertToNodeSpace({ cx, y }));
+            rate->setID("gsl-rank"_spr); // удаляется вместе с подписями мест
+            parent->addChild(rate, 10);
+            break;
+        }
     }
 }
 
@@ -177,6 +204,7 @@ static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
     collect(main, nodes);
 
     float rowY = -1.f, rowRight = 0.f;
+    bool trimSong = Mod::get()->getSettingValue<bool>("trim-song-name");
     for (auto n : nodes) {
         auto lbl = typeinfo_cast<CCLabelBMFont*>(n);
         if (!lbl || !lbl->getString() || insideMenuItem(lbl)) continue;
@@ -185,7 +213,7 @@ static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
         auto c = lbl->getColor();
 
         // 1. название трека (розовая строка) — не дальше начала превью
-        if (c.r > 200 && c.b > 200 && c.g < 190 && str.find('#') != 0) {
+        if (trimSong && c.r > 200 && c.b > 200 && c.g < 190 && str.find('#') != 0) {
             float maxW = (cellLeft + w * 0.60f) - box.getMinX();
             if (maxW > 20.f && box.size.width > maxW) {
                 lbl->setScale(lbl->getScale() * maxW / box.size.width);
@@ -228,6 +256,19 @@ static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
         lbl->setAnchorPoint({ 0.f, .5f });
         lbl->setPosition({ x, 0.f });
         pts->addChild(lbl);
+        x += lbl->getScaledContentWidth();
+
+        if (Mod::get()->getSettingValue<bool>("show-rate")) {
+            for (auto& e : entries) {
+                if (e.rate.empty()) continue;
+                auto rate = CCLabelBMFont::create(fmt::format("Rate {}", e.rate).c_str(), "goldFont.fnt");
+                rate->setScale(.4f);
+                rate->setAnchorPoint({ 0.f, .5f });
+                rate->setPosition({ x + 8.f, 0.f });
+                pts->addChild(rate);
+                break;
+            }
+        }
         pts->setPosition(main->convertToNodeSpace({ rowRight + 14.f, rowY }));
         main->addChild(pts, 20);
     }
@@ -284,6 +325,7 @@ class $modify(GSLLevelInfo, LevelInfoLayer) {
 class $modify(GSLSearchLayer, LevelSearchLayer) {
     bool init(int type) {
         if (!LevelSearchLayer::init(type)) return false;
+        if (!Mod::get()->getSettingValue<bool>("show-gsl-button")) return true;
 
         // круглая кнопка с логотипом GSL
         auto logo = CCSprite::create("gsl_btn.png"_spr);
