@@ -923,12 +923,12 @@ void GSLListLayer::showLevels(CCArray* levels) {
 
 // ---------- фоны ----------
 
-// Картинки gsl_bg_1.png, gsl_bg_2.png, ... из resources/ — сколько есть
+// Картинки gsl_bg_1.jpg, gsl_bg_2.jpg, ... из resources/backgrounds — сколько есть
 void GSLListLayer::setupBackgrounds() {
     auto fu = CCFileUtils::sharedFileUtils();
     for (int i = 1; i <= 100; i++) {
-        auto name = fmt::format("{}/gsl_bg_{}.png", Mod::get()->getID(), i);
-        auto path = fu->fullPathForFilename(name.c_str(), false);
+        auto name = fmt::format("{}/gsl_bg_{}.jpg", Mod::get()->getID(), i);
+        auto path = fu->fullPathForFilename(name.c_str(), true);
         if (!fu->isFileExist(path)) break;
         m_bgFiles.push_back(name);
     }
