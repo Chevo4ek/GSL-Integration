@@ -7,7 +7,7 @@ static std::vector<std::string> const LISTS = {
 
 GSLPopup* GSLPopup::create() {
     auto ret = new GSLPopup();
-    if (ret->initAnchored(400.f, 270.f)) {
+    if (ret->init()) {
         ret->autorelease();
         return ret;
     }
@@ -15,7 +15,8 @@ GSLPopup* GSLPopup::create() {
     return nullptr;
 }
 
-bool GSLPopup::setup() {
+bool GSLPopup::init() {
+    if (!Popup::init(400.f, 270.f)) return false;
     this->setTitle("Global Shitty List");
     auto size = m_mainLayer->getContentSize();
 
@@ -63,7 +64,7 @@ void GSLPopup::onTab(CCObject* sender) {
 
 void GSLPopup::onRefresh(CCObject*) {
     GSLManager::get()->forceRefresh();
-    Notification::create("Refreshing list...", NotificationIcon::Loading)->show();
+    m_status->setString("Refreshing... reopen the window in a few seconds");
 }
 
 void GSLPopup::selectList(std::string const& list) {

@@ -1,14 +1,20 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LevelCell.hpp>
 #include <Geode/modify/LevelSearchLayer.hpp>
+#include <Geode/modify/MenuLayer.hpp>
 #include "GSLManager.hpp"
 #include "GSLPopup.hpp"
 
 using namespace geode::prelude;
 
-$on_mod(Loaded) {
-    GSLManager::get()->start();
-}
+// Запускаем синхронизацию, когда открылось главное меню
+class $modify(GSLMenuLayer, MenuLayer) {
+    bool init() {
+        if (!MenuLayer::init()) return false;
+        GSLManager::get()->start(); // повторный вызов ничего не делает
+        return true;
+    }
+};
 
 // Значки "#12 Classic" сбоку у каждого уровня в результатах поиска
 class $modify(GSLLevelCell, LevelCell) {

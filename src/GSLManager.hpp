@@ -52,7 +52,7 @@ private:
     bool m_loading = false;
     bool m_started = false;
 
-    EventListener<web::WebTask> m_checkListener;
-    EventListener<web::WebTask> m_statsListener;
-    EventListener<web::WebTask> m_pageListener;
+    async::TaskHolder<web::WebResponse> m_checkListener;
+    async::TaskHolder<web::WebResponse> m_statsListener;
+    async::TaskHolder<web::WebResponse> m_pageListener;
 };

@@ -6,12 +6,12 @@
 using namespace geode::prelude;
 
 // Окно со всем листом: вкладки по спискам, клик по уровню открывает его.
-class GSLPopup : public Popup<> {
+class GSLPopup : public Popup {
 public:
     static GSLPopup* create();
 
 protected:
-    bool setup() override;
+    bool init();
     void selectList(std::string const& list);
     void onTab(CCObject* sender);
     void onLevel(CCObject* sender);

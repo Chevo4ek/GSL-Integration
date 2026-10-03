@@ -41,76 +41,76 @@ void GSLManager::forceRefresh() {
 void GSLManager::checkForChanges() {
     if (m_loading) return;
 
-    m_checkListener.bind([this](web::WebTask::Event* e) {
-        auto res = e->getValue();
-        if (!res) return;
-        if (!res->ok()) { log::warn("GSL: changelog request failed ({})", res->code()); return; }
+    m_checkListener.spawn(
+        web::WebRequest().get(fmt::format("{}/changelog?limit=1", API)),
+        [this](web::WebResponse res) {
+            if (!res.ok()) { log::warn("GSL: changelog request failed ({})", res.code()); return; }
 
-        auto json = res->json().unwrapOr(matjson::Value());
-        std::string lastChange;
-        if (auto arr = json["data"].asArray(); arr && !arr.unwrap().empty()) {
-            lastChange = arr.unwrap()[0]["id"].asString().unwrapOr("");
+            auto json = res.json().unwrapOr(matjson::Value());
+            std::string lastChange;
+            if (auto arr = json["data"].asArray(); arr && !arr.unwrap().empty()) {
+                lastChange = arr.unwrap()[0]["id"].asString().unwrapOr("");
+            }
+
+            m_statsListener.spawn(
+                web::WebRequest().get(fmt::format("{}/stats", API)),
+                [this, lastChange](web::WebResponse res) {
+                    if (!res.ok()) { log::warn("GSL: stats request failed ({})", res.code()); return; }
+
+                    auto json = res.json().unwrapOr(matjson::Value());
+                    auto count = json["data"]["levels"].asInt().unwrapOr(-1);
+                    auto version = lastChange + "|" + std::to_string(count);
+
+                    if (version == m_version && !m_all.empty()) return; // ничего не поменялось
+
+                    log::info("GSL: database changed ({} -> {}), reloading", m_version, version);
+                    m_pendingVersion = version;
+                    m_pending.clear();
+                    m_loading = true;
+                    fetchPage(0);
+                }
+            );
         }
-
-        m_statsListener.bind([this, lastChange](web::WebTask::Event* e) {
-            auto res = e->getValue();
-            if (!res) return;
-            if (!res->ok()) { log::warn("GSL: stats request failed ({})", res->code()); return; }
-
-            auto json = res->json().unwrapOr(matjson::Value());
-            auto count = json["data"]["levels"].asInt().unwrapOr(-1);
-            auto version = lastChange + "|" + std::to_string(count);
-
-            if (version == m_version && !m_all.empty()) return; // ничего не поменялось
-
-            log::info("GSL: database changed ({} -> {}), reloading", m_version, version);
-            m_pendingVersion = version;
-            m_pending.clear();
-            m_loading = true;
-            fetchPage(0);
-        });
-        m_statsListener.setFilter(web::WebRequest().get(fmt::format("{}/stats", API)));
-    });
-    m_checkListener.setFilter(web::WebRequest().get(fmt::format("{}/changelog?limit=1", API)));
+    );
 }
 
 void GSLManager::fetchPage(int offset) {
-    m_pageListener.bind([this, offset](web::WebTask::Event* e) {
-        auto res = e->getValue();
-        if (!res) return;
-        if (!res->ok()) {
-            log::warn("GSL: levels request failed ({})", res->code());
+    m_pageListener.spawn(
+        web::WebRequest().get(
+            fmt::format("{}/levels?limit={}&offset={}&sort=rank&order=asc", API, PAGE, offset)
+        ),
+        [this, offset](web::WebResponse res) {
+            if (!res.ok()) {
+                log::warn("GSL: levels request failed ({})", res.code());
+                m_loading = false;
+                return;
+            }
+
+            auto json = res.json().unwrapOr(matjson::Value());
+            if (auto arr = json["data"].asArray()) {
+                for (auto& v : arr.unwrap()) m_pending.push_back(v);
+            }
+
+            if (json["meta"]["hasMore"].asBool().unwrapOr(false)) {
+                // следующую страницу запускаем после выхода из этого колбэка
+                Loader::get()->queueInMainThread([this, offset] { fetchPage(offset + PAGE); });
+                return;
+            }
+
+            // Всё скачано — заменяем лист целиком, удалённые уровни исчезнут
+            matjson::Value all = matjson::Value::array();
+            for (auto& v : m_pending) all.push(v);
+            m_pending.clear();
+
+            applyLevels(all);
+            m_version = m_pendingVersion;
+            Mod::get()->setSavedValue("cache-levels", all);
+            Mod::get()->setSavedValue("cache-version", m_version);
             m_loading = false;
-            return;
+
+            log::info("GSL: loaded {} levels", m_all.size());
         }
-
-        auto json = res->json().unwrapOr(matjson::Value());
-        if (auto arr = json["data"].asArray()) {
-            for (auto& v : arr.unwrap()) m_pending.push_back(v);
-        }
-
-        if (json["meta"]["hasMore"].asBool().unwrapOr(false)) {
-            fetchPage(offset + PAGE);
-            return;
-        }
-
-        // Всё скачано — заменяем лист целиком, удалённые уровни исчезнут
-        matjson::Value all = matjson::Value::array();
-        for (auto& v : m_pending) all.push(v);
-        m_pending.clear();
-
-        applyLevels(all);
-        m_version = m_pendingVersion;
-        Mod::get()->setSavedValue("cache-levels", all);
-        Mod::get()->setSavedValue("cache-version", m_version);
-        m_loading = false;
-
-        log::info("GSL: loaded {} levels", m_all.size());
-    });
-
-    m_pageListener.setFilter(web::WebRequest().get(
-        fmt::format("{}/levels?limit={}&offset={}&sort=rank&order=asc", API, PAGE, offset)
-    ));
+    );
 }
 
 void GSLManager::applyLevels(matjson::Value const& arr) {
