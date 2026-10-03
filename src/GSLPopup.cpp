@@ -508,24 +508,32 @@ bool GSLListLayer::init() {
     m_note->setVisible(false);
     this->addChild(m_note, 5);
 
-    // Поиск — коричневая полоса внутри рамки, сразу под заголовком; справа фильтр и лупа
-    {
-        float left = win.width / 2 - LIST_W / 2;
-        float stripY = listBottom + LIST_H;
-        auto strip = CCLayerColor::create({ 194, 114, 62, 255 }, LIST_W, SEARCH_H);
-        strip->setPosition({ left, stripY });
-        this->addChild(strip, 2); // поверх рамки списка (z = 1)
+    // Рамка списка создаётся один раз; при смене страницы меняется только список внутри
+    m_listLayer = GJListLayer::create(
+        nullptr, GSLManager::prettyListName(m_list).c_str(), { 191, 114, 62, 255 }, LIST_W, LIST_H + SEARCH_H, 0
+    );
+    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, listBottom });
+    this->addChild(m_listLayer, 1);
 
+    // Поиск — полоса внутри рамки над списком, как в игре и в Global Demonlist
+    {
         auto stripMenu = CCMenu::create();
-        stripMenu->setPosition({ left, stripY });
-        this->addChild(stripMenu, 3);
+        stripMenu->ignoreAnchorPointForPosition(false);
+        stripMenu->setAnchorPoint({ 0.f, 0.f });
+        stripMenu->setContentSize({ LIST_W, SEARCH_H });
+        stripMenu->setPosition({ 0.f, LIST_H });
+        stripMenu->setID("search-bar-menu"_spr);
+        m_listLayer->addChild(stripMenu);
+
+        auto strip = CCLayerColor::create({ 194, 114, 62, 255 }, LIST_W, SEARCH_H);
+        stripMenu->addChild(strip, -1);
 
         float midY = SEARCH_H / 2;
         auto searchSpr = CCSprite::createWithSpriteFrameName("gj_findBtn_001.png");
-        searchSpr->setScale(24.f / searchSpr->getContentHeight());
+        searchSpr->setScale(.7f);
         float btnW = searchSpr->getScaledContentWidth();
         auto searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GSLListLayer::onSearch));
-        searchBtn->setPosition({ LIST_W - 6.f - btnW / 2, midY });
+        searchBtn->setPosition({ LIST_W - 4.f - btnW / 2, midY });
         stripMenu->addChild(searchBtn);
 
         m_filterBg = CCScale9Sprite::create("GJ_button_01.png");
@@ -537,21 +545,21 @@ bool GSLListLayer::init() {
         }
         m_filterBg->setScale(searchSpr->getScaledContentHeight() / 40.f);
         auto filterBtn = CCMenuItemSpriteExtra::create(m_filterBg, this, menu_selector(GSLListLayer::onFilter));
-        filterBtn->setPosition({ LIST_W - 6.f - btnW * 1.5f - 5.f, midY });
+        filterBtn->setPosition({ LIST_W - 4.f - btnW * 1.5f - 4.f, midY });
         stripMenu->addChild(filterBtn);
 
-        float inputW = LIST_W - btnW * 2 - 30.f;
-        m_search = TextInput::create(inputW, "Search levels...", "bigFont.fnt");
+        float inputW = LIST_W - btnW * 2 - 24.f;
+        m_search = TextInput::create(inputW, "Search levels...");
         m_search->setTextAlign(TextInputAlign::Left);
         auto input = m_search->getInputNode();
         input->setLabelPlaceholderScale(.4f);
         input->setMaxLabelScale(.4f);
         auto inputBg = m_search->getBGSprite();
-        inputBg->setContentSize({ inputW * 2, 44.f });
+        inputBg->setContentSize({ inputW * 2, 40.f });
         inputBg->setScale(.5f);
-        m_search->setPosition({ left + 8.f + inputW / 2, stripY + midY });
+        m_search->setPosition({ 6.f + inputW / 2, midY });
         m_search->setCallback([this](std::string const& text) { m_query = text; });
-        this->addChild(m_search, 4);
+        stripMenu->addChild(m_search);
     }
 
     // Стрелки страниц — одинаковые, на одном расстоянии от рамки
@@ -644,6 +652,10 @@ void GSLListLayer::selectList(std::string const& list) {
     m_entries = GSLManager::get()->getList(list);
 
     updateListButton();
+    if (auto title = typeinfo_cast<CCLabelBMFont*>(m_listLayer->getChildByID("title"))) {
+        title->setString(GSLManager::prettyListName(list).c_str());
+        title->limitLabelWidth(280.f, .8f, .1f);
+    }
     m_note->setVisible(list == "future" && !Mod::get()->getSavedValue<bool>("future-info-read"));
     loadPage();
 }
@@ -869,13 +881,12 @@ void GSLListLayer::showLevels(CCArray* levels) {
     auto arr = CCArray::create();
     for (auto lvl : sorted) arr->addObject(lvl);
 
-    if (m_listLayer) m_listLayer->removeFromParent();
-
-    auto win = CCDirector::get()->getWinSize();
+    if (auto old = m_listLayer->m_listView) {
+        old->removeFromParent();
+        old->release();
+    }
     auto listView = CustomListView::create(arr, BoomListType::Level, LIST_H, LIST_W);
-    m_listLayer = GJListLayer::create(
-        listView, GSLManager::prettyListName(m_list).c_str(), { 191, 114, 62, 255 }, LIST_W, LIST_H + SEARCH_H, 0
-    );
-    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, listBottomY() });
-    this->addChild(m_listLayer, 1);
+    listView->retain();
+    m_listLayer->addChild(listView, 6, 9);
+    m_listLayer->m_listView = listView;
 }
