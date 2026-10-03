@@ -4,8 +4,8 @@
 
 static constexpr int PER_PAGE = 10;
 static constexpr float LIST_W = 356.f;
-static constexpr float LIST_H = 215.f;
-static constexpr float LIST_SHIFT_X = 22.f;
+static constexpr float LIST_H = 200.f;
+static constexpr float LIST_SHIFT_X = 0.f;
 
 static std::string lower(std::string s) {
     for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -55,7 +55,8 @@ bool GSLListLayer::init() {
     menu->addChild(refreshBtn);
 
     // Рамка листа: по центру, чуть ниже середины
-    float listBottom = 16.f;
+    // всё вместе (рамка + шапка + поиск) — по центру экрана
+    float listBottom = (win.height - (LIST_H + 79.f)) / 2 + 16.f;
     float listTop = listBottom + LIST_H + 30.f; // вместе с зелёной шапкой
 
     // Вкладки списков — столбиком слева
@@ -68,14 +69,14 @@ bool GSLListLayer::init() {
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLListLayer::onTab));
         btn->setTag(static_cast<int>(i));
         float tabsTop = win.height / 2 + 26.f * (lists.size() - 1) / 2 + 30.f;
-        btn->setPosition({ 62.f, tabsTop - 26.f * i });
+        btn->setPosition({ 38.f, tabsTop - 26.f * i });
         menu->addChild(btn);
         m_tabSprites.push_back(spr);
     }
 
     // Пояснение для Future Classic (видно только на этой вкладке)
     m_note = CCNode::create();
-    m_note->setPosition({ 62.f, win.height / 2 + 26.f * (lists.size() - 1) / 2 + 30.f - 26.f * lists.size() - 6.f });
+    m_note->setPosition({ 38.f, win.height / 2 + 26.f * (lists.size() - 1) / 2 + 30.f - 26.f * lists.size() - 6.f });
     {
         char const* lines[] = { "Only levels with", "a GD ID are shown.", "Full list on site:" };
         float y = 0.f;
@@ -110,15 +111,16 @@ bool GSLListLayer::init() {
 
     // Страницы
     auto prevSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
-    prevSpr->setScale(.7f);
+    prevSpr->setScale(.6f);
     m_prev = CCMenuItemSpriteExtra::create(prevSpr, this, menu_selector(GSLListLayer::onPrev));
-    m_prev->setPosition({ win.width / 2 + LIST_SHIFT_X - LIST_W / 2 - 22.f, 16.f + LIST_H / 2 });
+    m_prev->setPosition({ win.width / 2 - LIST_W / 2 - 24.f, listBottom + LIST_H / 2 });
     menu->addChild(m_prev);
 
     auto nextSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
     nextSpr->setFlipX(true);
+    nextSpr->setScale(.6f);
     m_next = CCMenuItemSpriteExtra::create(nextSpr, this, menu_selector(GSLListLayer::onNext));
-    m_next->setPosition({ win.width - 25.f, win.height / 2 });
+    m_next->setPosition({ win.width / 2 + LIST_W / 2 + 24.f, listBottom + LIST_H / 2 });
     menu->addChild(m_next);
 
     m_pageLabel = CCLabelBMFont::create("", "goldFont.fnt");
@@ -129,7 +131,7 @@ bool GSLListLayer::init() {
 
     m_status = CCLabelBMFont::create("", "bigFont.fnt");
     m_status->setScale(.5f);
-    m_status->setPosition({ win.width / 2 + LIST_SHIFT_X, 16.f + LIST_H / 2 });
+    m_status->setPosition({ win.width / 2, listBottom + LIST_H / 2 });
     this->addChild(m_status, 10);
 
     this->setKeypadEnabled(true);
@@ -283,6 +285,6 @@ void GSLListLayer::showLevels(CCArray* levels) {
     m_listLayer = GJListLayer::create(
         listView, GSLManager::prettyListName(m_list).c_str(), { 191, 114, 62, 255 }, LIST_W, LIST_H, 0
     );
-    m_listLayer->setPosition({ win.width / 2 + LIST_SHIFT_X - LIST_W / 2, 16.f });
+    m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, (CCDirector::get()->getWinSize().height - (LIST_H + 79.f)) / 2 + 16.f });
     this->addChild(m_listLayer, 1);
 }

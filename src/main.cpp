@@ -99,22 +99,27 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     if (frame > 0) {
         diff->updateDifficultyFrame(frame, GJDifficultyName::Short);
         if (diffLabel) {
-            float sc = diffLabel->getScale();
-            diffLabel->setString(text);
-            diffLabel->limitLabelWidth(fullNames ? 90.f : 60.f, sc, .1f);
+            while (auto old = diffLabel->getParent()->getChildByID("gsl-diff"_spr)) old->removeFromParent();
+            auto own = CCLabelBMFont::create(text, diffLabel->getFntFile());
+            own->setPosition(diffLabel->getPosition());
+            own->setAnchorPoint(diffLabel->getAnchorPoint());
+            own->limitLabelWidth(fullNames ? 90.f : 60.f, diffLabel->getScale(), .1f);
+            own->setID("gsl-diff"_spr);
+            diffLabel->getParent()->addChild(own, diffLabel->getZOrder());
+            diffLabel->setVisible(false);
         }
     }
 
     // самая нижняя точка столбика "мордашка / подпись / монетки"
     float bottom = diffBox.getMinY();
     if (diffLabel) bottom = std::min(bottom, worldBox(diffLabel).getMinY());
-    float range = fullNames ? 55.f : 45.f;
+    float range = fullNames ? 45.f : 40.f;
     for (auto n : nodes) {
         if (n == diff || !n->isVisible() || !typeinfo_cast<CCSprite*>(n)) continue;
         if (typeinfo_cast<GJDifficultySprite*>(n->getParent())) continue;
         auto box = worldBox(n);
         if (box.size.width > 22.f || box.size.height > 22.f) continue; // монетки маленькие
-        if (std::abs(box.getMidX() - cx) > 30.f) continue;
+        if (std::abs(box.getMidX() - cx) > 15.f) continue; // монетки строго под мордашкой
         if (box.getMaxY() > diffBox.getMinY() + 2.f) continue;
         if (box.getMaxY() < diffBox.getMinY() - range) continue;
         bottom = std::min(bottom, box.getMinY());
@@ -174,8 +179,10 @@ class $modify(GSLSearchLayer, LevelSearchLayer) {
         if (!LevelSearchLayer::init(type)) return false;
 
         // круглая кнопка с логотипом GSL
-        auto spr = CCSprite::create("gsl_btn.png"_spr);
-        spr->setScale(42.f / spr->getContentWidth());
+        auto logo = CCSprite::create("gsl_btn.png"_spr);
+        logo->setScale(34.f / logo->getContentWidth());
+        auto spr = CircleButtonSprite::create(logo, CircleBaseColor::Green, CircleBaseSize::Medium);
+        spr->setScale(.85f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLSearchLayer::onGSL));
         btn->setID("gsl-button"_spr);
 
