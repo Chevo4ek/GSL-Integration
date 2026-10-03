@@ -212,15 +212,35 @@ static float listBottomY() {
     return (CCDirector::get()->getWinSize().height - BLOCK_H) / 2 + 16.f;
 }
 
-static CCMenuItemSpriteExtra* squareBtn(char const* text, CCObject* target, SEL_MenuHandler cb, CCLabelBMFont** outLabel = nullptr) {
-    auto bg = CCScale9Sprite::create("GJ_button_02.png");
+static CCScale9Sprite* squareBg(char const* texture) {
+    auto bg = CCScale9Sprite::create(texture);
     bg->setContentSize({ 40.f, 40.f });
+    bg->setScale(.75f);
+    return bg;
+}
+
+static CCMenuItemSpriteExtra* squareBtn(char const* texture, char const* text, CCObject* target, SEL_MenuHandler cb, CCLabelBMFont** outLabel = nullptr) {
+    auto bg = squareBg(texture);
     auto lbl = CCLabelBMFont::create(text, "bigFont.fnt");
     lbl->limitLabelWidth(30.f, .6f, .1f);
     lbl->setPosition({ 20.f, 21.f });
     bg->addChild(lbl);
-    bg->setScale(.75f);
     if (outLabel) *outLabel = lbl;
+    return CCMenuItemSpriteExtra::create(bg, target, cb);
+}
+
+// Кнопка с кубиком (рисуем сами: белый кубик с пятью точками)
+static CCMenuItemSpriteExtra* diceBtn(char const* texture, CCObject* target, SEL_MenuHandler cb) {
+    auto bg = squareBg(texture);
+    auto dice = CCDrawNode::create();
+    float r = 11.f;
+    CCPoint box[] = { { -r, -r }, { r, -r }, { r, r }, { -r, r } };
+    dice->drawPolygon(box, 4, { 1.f, 1.f, 1.f, 1.f }, 1.5f, { 0.f, 0.f, 0.f, 1.f });
+    float d = 5.5f;
+    CCPoint dots[] = { { 0.f, 0.f }, { -d, -d }, { d, d }, { -d, d }, { d, -d } };
+    for (auto& p : dots) dice->drawDot(p, 2.f, { 0.f, 0.f, 0.f, 1.f });
+    dice->setPosition({ 20.f, 21.f });
+    bg->addChild(dice);
     return CCMenuItemSpriteExtra::create(bg, target, cb);
 }
 
@@ -267,15 +287,15 @@ bool GSLListLayer::init() {
     listBtn->setPosition({ win.width - 42.f, win.height - 30.f });
     menu->addChild(listBtn);
 
-    auto pageBtn = squareBtn("1", this, menu_selector(GSLListLayer::onGoToPage), &m_pageBtnLabel);
+    auto pageBtn = squareBtn("GJ_button_02.png", "1", this, menu_selector(GSLListLayer::onGoToPage), &m_pageBtnLabel);
     pageBtn->setPosition({ win.width - 22.f, win.height - 62.f });
     menu->addChild(pageBtn);
 
-    auto randBtn = squareBtn("?", this, menu_selector(GSLListLayer::onRandomPage));
+    auto randBtn = diceBtn("GJ_button_03.png", this, menu_selector(GSLListLayer::onRandomPage));
     randBtn->setPosition({ win.width - 22.f, win.height - 94.f });
     menu->addChild(randBtn);
 
-    auto lastBtn = squareBtn(">>", this, menu_selector(GSLListLayer::onLastPage));
+    auto lastBtn = squareBtn("GJ_button_06.png", ">>", this, menu_selector(GSLListLayer::onLastPage));
     lastBtn->setPosition({ win.width - 22.f, win.height - 126.f });
     menu->addChild(lastBtn);
 
