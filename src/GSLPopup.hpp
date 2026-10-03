@@ -25,12 +25,29 @@ protected:
     void onExit() override;
 
     void onBack(CCObject*);
-    void onTab(CCObject* sender);
     void onPrev(CCObject*);
     void onNext(CCObject*);
     void onSearch(CCObject*);
     void onRefresh(CCObject*);
     void onSite(CCObject*);
+    void onFilter(CCObject*);
+    void onPickList(CCObject*);
+    void onGoToPage(CCObject*);
+    void onRandomPage(CCObject*);
+    void onLastPage(CCObject*);
+
+public:
+    // фильтры (окно фильтров меняет их и вызывает applyFilters)
+    int m_rankLimit = 0;          // 0 = все, иначе Top N
+    bool m_hideCompleted = false;
+    bool m_onlyCreator = false;
+    std::string m_creator;
+    void applyFilters();
+    void selectListPublic(std::string const& list) { selectList(list); }
+    void goToPage(int page);
+    int pageCount() const;
+
+protected:
 
     void selectList(std::string const& list);
     void loadPage();
@@ -49,7 +66,9 @@ protected:
     CCLabelBMFont* m_pageLabel = nullptr;
     CCLabelBMFont* m_status = nullptr;
     CCNode* m_note = nullptr;
+    CCScale9Sprite* m_filterBg = nullptr;
+    ButtonSprite* m_listBtnSpr = nullptr;
+    CCLabelBMFont* m_pageBtnLabel = nullptr;
     CCMenuItemSpriteExtra* m_prev = nullptr;
     CCMenuItemSpriteExtra* m_next = nullptr;
-    std::vector<ButtonSprite*> m_tabSprites;
 };
