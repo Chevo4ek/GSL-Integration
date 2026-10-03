@@ -70,7 +70,9 @@ protected:
     CCLabelBMFont* m_status = nullptr;
     CCNode* m_note = nullptr;
     CCScale9Sprite* m_filterBg = nullptr;
-    ButtonSprite* m_listBtnSpr = nullptr;
+    CCMenuItemSpriteExtra* m_listBtn = nullptr;
+    CCMenu* m_menu = nullptr;
+    void updateListButton();
     CCLabelBMFont* m_pageBtnLabel = nullptr;
     CCMenuItemSpriteExtra* m_prev = nullptr;
     CCMenuItemSpriteExtra* m_next = nullptr;
