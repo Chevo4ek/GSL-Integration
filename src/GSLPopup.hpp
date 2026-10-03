@@ -87,6 +87,14 @@ protected:
     void onToggleSearch(CCObject*);
     void rebuildListView(bool keepScroll);
     void update(float dt) override;
+
+    // Фоны-скриншоты уровней: плавно сменяются каждые 30 секунд
+    std::vector<std::string> m_bgFiles;
+    CCSprite* m_bgSprite = nullptr;
+    size_t m_bgIndex = 0;
+    void setupBackgrounds();
+    CCSprite* makeBackground(std::string const& file);
+    void nextBackground(float);
     void updateListButton();
     CCLabelBMFont* m_pageBtnLabel = nullptr;
     CCMenuItemSpriteExtra* m_prev = nullptr;

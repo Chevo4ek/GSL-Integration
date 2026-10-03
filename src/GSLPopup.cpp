@@ -437,6 +437,7 @@ bool GSLListLayer::init() {
     auto bg = createLayerBG();
     bg->setColor({ 0, 102, 255 });
     this->addChild(bg, -2);
+    setupBackgrounds();
 
     auto menu = CCMenu::create();
     menu->setPosition({ 0.f, 0.f });
@@ -918,6 +919,57 @@ void GSLListLayer::showLevels(CCArray* levels) {
 
     m_shownLevels = arr;
     rebuildListView(false);
+}
+
+// ---------- фоны ----------
+
+// Картинки gsl_bg_1.png, gsl_bg_2.png, ... из resources/ — сколько есть
+void GSLListLayer::setupBackgrounds() {
+    auto fu = CCFileUtils::sharedFileUtils();
+    for (int i = 1; i <= 100; i++) {
+        auto name = fmt::format("{}/gsl_bg_{}.png", Mod::get()->getID(), i);
+        auto path = fu->fullPathForFilename(name.c_str(), false);
+        if (!fu->isFileExist(path)) break;
+        m_bgFiles.push_back(name);
+    }
+    if (m_bgFiles.empty()) return; // картинок нет — остаётся обычный синий фон
+
+    m_bgIndex = static_cast<size_t>(std::rand()) % m_bgFiles.size();
+    m_bgSprite = makeBackground(m_bgFiles[m_bgIndex]);
+    if (m_bgSprite) this->addChild(m_bgSprite, -1);
+    if (m_bgFiles.size() > 1) {
+        this->schedule(schedule_selector(GSLListLayer::nextBackground), 30.f);
+    }
+}
+
+// Картинка на весь экран (обрезается по краям, без растягивания), чуть затемнена,
+// чтобы кнопки и список читались
+CCSprite* GSLListLayer::makeBackground(std::string const& file) {
+    auto spr = CCSprite::create(file.c_str());
+    if (!spr) return nullptr;
+    auto win = CCDirector::get()->getWinSize();
+    auto size = spr->getContentSize();
+    spr->setScale(std::max(win.width / size.width, win.height / size.height));
+    spr->setPosition(win / 2);
+    spr->setColor({ 150, 150, 150 });
+    return spr;
+}
+
+void GSLListLayer::nextBackground(float) {
+    if (m_bgFiles.size() < 2) return;
+    m_bgIndex = (m_bgIndex + 1) % m_bgFiles.size();
+    auto next = makeBackground(m_bgFiles[m_bgIndex]);
+    if (!next) return;
+
+    // новая картинка проявляется поверх старой, старая потом убирается
+    float t = 1.5f;
+    next->setOpacity(0);
+    this->addChild(next, -1);
+    next->runAction(CCFadeIn::create(t));
+    if (auto old = m_bgSprite) {
+        old->runAction(CCSequence::create(CCDelayTime::create(t), CCRemoveSelf::create(), nullptr));
+    }
+    m_bgSprite = next;
 }
 
 // ---------- прячущийся поиск ----------
