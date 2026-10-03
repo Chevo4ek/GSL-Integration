@@ -40,8 +40,6 @@ public:
     // фильтры (окно фильтров меняет их и вызывает applyFilters)
     int m_rankLimit = 0;          // 0 = все, иначе Top N
     int m_lengthMask = 0;         // биты: 0 Tiny, 1 Short, 2 Medium, 3 Long, 4 XL, 5 Platformer; 0 = любая
-    bool m_rated = false;
-    bool m_unrated = false;
     bool m_completedBy = false;
     std::string m_victor;
     bool m_onlyCreator = false;
@@ -57,7 +55,7 @@ protected:
     void loadPage();
     void showLevels(CCArray* levels);
     std::vector<GSLEntry> filtered(bool useGD = true) const;
-    bool needsGDInfo() const { return m_lengthMask != 0 || m_rated != m_unrated; }
+    bool needsGDInfo() const { return m_lengthMask != 0; }
 
     std::string m_list = "classic";
     std::string m_query;
