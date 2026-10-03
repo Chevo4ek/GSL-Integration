@@ -116,7 +116,8 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     float range = fullNames ? 45.f : 40.f;
     for (auto n : nodes) {
         if (n == diff || !n->isVisible() || !typeinfo_cast<CCSprite*>(n)) continue;
-        if (n->getID().find("coin") == std::string::npos) continue; // только монетки
+        std::string nodeId = n->getID().data();
+        if (nodeId.find("coin") == std::string::npos) continue; // только монетки
         if (typeinfo_cast<GJDifficultySprite*>(n->getParent())) continue;
         auto box = worldBox(n);
         if (box.size.width > 22.f || box.size.height > 22.f) continue; // монетки маленькие
