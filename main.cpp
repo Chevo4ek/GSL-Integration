@@ -99,26 +99,33 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     if (frame > 0) {
         diff->updateDifficultyFrame(frame, GJDifficultyName::Short);
         if (diffLabel) {
-            float sc = diffLabel->getScale();
-            diffLabel->setString(text);
-            diffLabel->limitLabelWidth(fullNames ? 90.f : 60.f, sc, .1f);
+            while (auto old = diffLabel->getParent()->getChildByID("gsl-diff"_spr)) old->removeFromParent();
+            auto own = CCLabelBMFont::create(text, diffLabel->getFntFile());
+            own->setPosition(diffLabel->getPosition());
+            own->setAnchorPoint(diffLabel->getAnchorPoint());
+            own->limitLabelWidth(fullNames ? 90.f : 60.f, diffLabel->getScale(), .1f);
+            own->setID("gsl-diff"_spr);
+            diffLabel->getParent()->addChild(own, diffLabel->getZOrder());
+            diffLabel->setVisible(false);
         }
     }
 
     // самая нижняя точка столбика "мордашка / подпись / монетки"
     float bottom = diffBox.getMinY();
     if (diffLabel) bottom = std::min(bottom, worldBox(diffLabel).getMinY());
-    float range = fullNames ? 55.f : 45.f;
+    float range = fullNames ? 45.f : 40.f;
     for (auto n : nodes) {
         if (n == diff || !n->isVisible() || !typeinfo_cast<CCSprite*>(n)) continue;
         if (typeinfo_cast<GJDifficultySprite*>(n->getParent())) continue;
         auto box = worldBox(n);
         if (box.size.width > 22.f || box.size.height > 22.f) continue; // монетки маленькие
-        if (std::abs(box.getMidX() - cx) > 30.f) continue;
+        if (std::abs(box.getMidX() - cx) > 15.f) continue; // монетки строго под мордашкой
         if (box.getMaxY() > diffBox.getMinY() + 2.f) continue;
         if (box.getMaxY() < diffBox.getMinY() - range) continue;
         bottom = std::min(bottom, box.getMinY());
     }
+
+    if (!fullNames) return; // в карточках ранг рисуется значком на превью (см. decorateCell)
 
     float lineH = fullNames ? 14.f : 9.f;
     float y = bottom - (fullNames ? 9.f : 6.f);
@@ -137,6 +144,131 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     }
 }
 
+static bool isLengthText(std::string const& s) {
+    static std::vector<std::string> const names = { "Tiny", "Short", "Medium", "Long", "XL", "Plat." };
+    return std::find(names.begin(), names.end(), s) != names.end();
+}
+
+static bool insideMenuItem(CCNode* n) {
+    for (auto p = n->getParent(); p; p = p->getParent()) {
+        if (typeinfo_cast<CCMenuItem*>(p)) return true;
+    }
+    return false;
+}
+
+// Оформление карточки: значок ранга на превью, очки листа, аккуратный ID,
+// название трека не заходит на превью.
+static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
+    auto main = cell->m_mainLayer;
+    if (!main) return;
+
+    for (auto id : { "gsl-rank-badges", "gsl-points" }) {
+        while (auto old = main->getChildByID(fmt::format("{}/{}", Mod::get()->getID(), id))) old->removeFromParent();
+    }
+
+    std::vector<GSLEntry> entries;
+    for (auto& e : all) if (e.list != "future") entries.push_back(e);
+
+    float w = cell->m_width > 0 ? cell->m_width : 356.f;
+    float h = cell->m_height > 0 ? cell->m_height : 90.f;
+    auto cellLeft = main->convertToWorldSpace({ 0.f, 0.f }).x;
+
+    std::vector<CCNode*> nodes;
+    collect(main, nodes);
+
+    float rowY = -1.f, rowRight = 0.f;
+    for (auto n : nodes) {
+        auto lbl = typeinfo_cast<CCLabelBMFont*>(n);
+        if (!lbl || !lbl->getString() || insideMenuItem(lbl)) continue;
+        std::string str = lbl->getString();
+        auto box = worldBox(lbl);
+        auto c = lbl->getColor();
+
+        // 1. название трека (розовая строка) — не дальше начала превью
+        if (c.r > 200 && c.b > 200 && c.g < 190 && str.find('#') != 0) {
+            float maxW = (cellLeft + w * 0.60f) - box.getMinX();
+            if (maxW > 20.f && box.size.width > maxW) {
+                lbl->setScale(lbl->getScale() * maxW / box.size.width);
+            }
+        }
+
+        // 4. ID уровня "#123..." — меньше и полупрозрачный (один раз)
+        if (str.size() > 1 && str[0] == '#' && std::isdigit(static_cast<unsigned char>(str[1]))
+            && !lbl->getUserObject("gsl-shrunk"_spr)) {
+            lbl->setScale(lbl->getScale() * .7f);
+            lbl->setOpacity(150);
+            lbl->setUserObject("gsl-shrunk"_spr, CCBool::create(true));
+        }
+
+        if (isLengthText(str)) rowY = box.getMidY();
+    }
+
+    // 3. очки листа в строке статистики
+    if (rowY > 0.f && !entries.empty()) {
+        for (auto n : nodes) {
+            if (!n->isVisible() || insideMenuItem(n)) continue;
+            auto box = worldBox(n);
+            if (box.size.width > 60.f) continue; // не фон и не превью
+            if (std::abs(box.getMidY() - rowY) < 6.f) rowRight = std::max(rowRight, box.getMaxX());
+        }
+        auto pts = CCNode::create();
+        pts->setID("gsl-points"_spr);
+        auto orbs = CCSprite::createWithSpriteFrameName("currencyOrbIcon_001.png");
+        float x = 0.f;
+        if (orbs) {
+            orbs->setScale(.55f);
+            orbs->setPosition({ 0.f, 0.f });
+            pts->addChild(orbs);
+            x = 11.f;
+        }
+        int total = 0;
+        for (auto& e : entries) total += e.points;
+        auto lbl = CCLabelBMFont::create(fmt::format("{}", total).c_str(), "bigFont.fnt");
+        lbl->setScale(.4f);
+        lbl->setAnchorPoint({ 0.f, .5f });
+        lbl->setPosition({ x, 0.f });
+        pts->addChild(lbl);
+        pts->setPosition(main->convertToNodeSpace({ rowRight + 14.f, rowY }));
+        main->addChild(pts, 20);
+    }
+
+    // 2. круглые значки ранга в правом нижнем углу превью
+    if (!entries.empty()) {
+        auto badges = CCNode::create();
+        badges->setID("gsl-rank-badges"_spr);
+        float bx = w - 16.f;
+        for (auto& e : entries) {
+            auto badge = CCNode::create();
+            auto circle = CCDrawNode::create();
+            circle->drawDot({ 0.f, 0.f }, 12.f, { 0.f, 0.f, 0.f, .55f });
+            auto lc = GSLManager::listColor(e.list);
+            badge->addChild(circle);
+
+            if (auto crown = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png")) {
+                crown->setScale(.3f);
+                crown->setPosition({ 0.f, 6.f });
+                badge->addChild(crown);
+            }
+            auto txt = CCLabelBMFont::create(fmt::format("#{}", e.rank).c_str(), "bigFont.fnt");
+            txt->limitLabelWidth(19.f, .3f, .1f);
+            txt->setPosition({ 0.f, -3.f });
+            badge->addChild(txt);
+
+            auto tag = CCLabelBMFont::create(GSLManager::shortListName(e.list).c_str(), "goldFont.fnt");
+            tag->setScale(.25f);
+            tag->setColor(lc);
+            tag->setPosition({ 0.f, -9.f });
+            badge->addChild(tag);
+
+            badge->setPosition({ bx, 15.f });
+            badges->addChild(badge);
+            bx -= 27.f;
+        }
+        main->addChild(badges, 30);
+    }
+    (void)h;
+}
+
 // Карточка уровня в поиске
 class $modify(GSLLevelCell, LevelCell) {
     void loadFromLevel(GJGameLevel* level) {
@@ -148,6 +280,7 @@ class $modify(GSLLevelCell, LevelCell) {
         auto list = *entries;
         Loader::get()->queueInMainThread([self, list] {
             if (auto diff = findDifficulty(self->m_mainLayer)) applyGSL(self, diff, list, false);
+            decorateCell(self, list);
         });
     }
 };
@@ -173,10 +306,11 @@ class $modify(GSLSearchLayer, LevelSearchLayer) {
     bool init(int type) {
         if (!LevelSearchLayer::init(type)) return false;
 
-        auto text = CCLabelBMFont::create("GSL", "goldFont.fnt");
-        text->setScale(.75f);
-        auto spr = CircleButtonSprite::create(text, CircleBaseColor::Green, CircleBaseSize::Medium);
-        spr->setScale(.8f);
+        // круглая кнопка с логотипом GSL
+        auto logo = CCSprite::create("gsl_btn.png"_spr);
+        logo->setScale(34.f / logo->getContentWidth());
+        auto spr = CircleButtonSprite::create(logo, CircleBaseColor::Green, CircleBaseSize::Medium);
+        spr->setScale(.85f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLSearchLayer::onGSL));
         btn->setID("gsl-button"_spr);
 
