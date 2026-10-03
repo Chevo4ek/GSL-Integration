@@ -1,10 +1,10 @@
 {
 	"geode": "5.10.1",
 	"gd": { "win": "2.2081" },
-	"id": "daniel.gsl-integration",
+	"id": "chevo4ek.gsl-integration",
 	"name": "Global Shitty List Integration",
 	"version": "v1.0.0",
-	"developer": "Daniel",
+	"developer": "Chevo4ek",
 	"description": "Shows Global Shitty List positions in level search and syncs with globalshittylist.com",
 	"settings": {
 		"poll-interval": {
