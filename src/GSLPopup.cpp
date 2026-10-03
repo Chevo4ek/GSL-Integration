@@ -557,6 +557,11 @@ bool GSLListLayer::init() {
     this->addChild(m_status, 10);
 
     this->setKeypadEnabled(true);
+    // лист по умолчанию — из настроек
+    auto def = Mod::get()->getSettingValue<std::string>("default-list");
+    for (auto& l : GSLManager::lists()) {
+        if (GSLManager::prettyListName(l) == def) m_list = l;
+    }
     selectList(m_list);
     return true;
 }

@@ -16,6 +16,7 @@ struct GSLEntry {
     int rank = 0;
     int levelId = 0;
     int points = 0;
+    std::string rate; // rate уровня в листе (как на сайте), может быть пустым
     std::vector<std::string> victors; // ники прошедших
 };
 

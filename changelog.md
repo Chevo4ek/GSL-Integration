@@ -8,4 +8,6 @@
 - GSL screen with list picker, pages, random page and search
 - Search filters: list position, length, completed by, created by
 - Info button with a link to the site
+- List rate shown in level search and on the level page
+- Settings: rank names, list rate, song name trimming, default list, GSL button + reminder, update notifications
 - Automatic sync with globalshittylist.com
