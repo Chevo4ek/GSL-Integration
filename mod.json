@@ -12,6 +12,9 @@
 	"resources": {
 		"sprites": [
 			"resources/*.png"
+		],
+		"files": [
+			"resources/backgrounds/*.jpg"
 		]
 	},
 	"settings": {
