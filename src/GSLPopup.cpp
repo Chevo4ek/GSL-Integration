@@ -489,18 +489,23 @@ bool GSLListLayer::init() {
     lastBtn->setPosition({ win.width - 26.f, win.height - 137.f });
     menu->addChild(lastBtn);
 
-    // Future Classic: синяя «i» в левом верхнем углу рамки — пояснение и ссылка на сайт
-    {
-        auto noteMenu = CCMenu::create();
-        noteMenu->setPosition({ 0.f, 0.f });
-        auto infoSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-        infoSpr->setScale(.7f);
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(GSLListLayer::onFutureInfo));
-        infoBtn->setPosition({ win.width / 2 - LIST_W / 2 + 16.f, listBottom + LIST_H + 15.f });
-        noteMenu->addChild(infoBtn);
-        m_note = noteMenu;
-        this->addChild(m_note, 5); // поверх рамки списка (у неё z = 1)
-    }
+    // Синяя «i» в левом нижнем углу: что такое GSL + ссылка на сайт
+    auto infoSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+    auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(GSLListLayer::onInfo));
+    infoBtn->setPosition({ 25.f, 25.f });
+    menu->addChild(infoBtn);
+
+    // Стрелочка к «i» на Future Classic — пока пояснение не прочитано
+    m_note = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+    m_note->setScale(.5f);
+    m_note->setPosition({ 62.f, 25.f });
+    m_note->runAction(CCRepeatForever::create(CCSequence::create(
+        CCEaseSineInOut::create(CCMoveBy::create(.45f, { 8.f, 0.f })),
+        CCEaseSineInOut::create(CCMoveBy::create(.45f, { -8.f, 0.f })),
+        nullptr
+    )));
+    m_note->setVisible(false);
+    this->addChild(m_note, 5);
 
     // Поиск — шириной с рамку, с отступом над ней; справа фильтр и лупа
     float searchY = listTop + 10.f + 15.f;
@@ -616,7 +621,7 @@ void GSLListLayer::selectList(std::string const& list) {
     m_entries = GSLManager::get()->getList(list);
 
     updateListButton();
-    m_note->setVisible(list == "future");
+    m_note->setVisible(list == "future" && !Mod::get()->getSavedValue<bool>("future-info-read"));
     loadPage();
 }
 
@@ -667,12 +672,24 @@ void GSLListLayer::updateListButton() {
     m_menu->addChild(m_listBtn);
 }
 
-void GSLListLayer::onFutureInfo(CCObject*) {
+void GSLListLayer::onInfo(CCObject*) {
+    std::string text =
+        "The <cg>Global Shitty List</c> is a <cy>community</c> ranking of "
+        "<cr>Classic</c>, <cr>Challenge</c>, <cl>Spam</c> and <cg>Future Classic</c> levels.\n"
+        "Full list, records and victors are on <cl>globalshittylist.com</c>.";
+    bool future = m_list == "future";
+    if (future) {
+        text += "\n\n<co>FUTURE CLASSIC:</c> only levels that already have a "
+                "<cy>GD ID</c> are shown here. <co>The full list is on the site!</c>";
+    }
+    Ref<GSLListLayer> self = this;
     createQuickPopup(
-        "Future Classic",
-        "Only levels with a <cy>GD ID</c> are shown.\nFull list on the site:",
-        "OK", "Website",
-        [](FLAlertLayer*, bool website) {
+        "Global Shitty List", text, "OK", "Website", 360.f,
+        [self, future](FLAlertLayer*, bool website) {
+            if (future) {
+                Mod::get()->setSavedValue("future-info-read", true);
+                self->m_note->setVisible(false);
+            }
             if (website) web::openLinkInBrowser("https://globalshittylist.com");
         }
     );
