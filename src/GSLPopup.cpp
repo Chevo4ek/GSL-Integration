@@ -468,14 +468,14 @@ bool GSLListLayer::init() {
     m_menu = menu; // кнопка выбора списка создаётся в updateListButton
 
     auto pageBtn = squareBtn("GJ_button_02.png", "1", this, menu_selector(GSLListLayer::onGoToPage), &m_pageBtnLabel);
-    pageBtn->setPosition({ win.width - 22.f, win.height - 62.f });
+    pageBtn->setPosition({ win.width - 22.f, win.height - 74.f });
     menu->addChild(pageBtn);
 
     // Рандомайзер и «в конец» — как в Global Demonlist Integration
     auto randSpr = CCSprite::create("gsl_randomBtn.png"_spr);
     randSpr->setScale(30.f / randSpr->getContentWidth());
     auto randBtn = CCMenuItemSpriteExtra::create(randSpr, this, menu_selector(GSLListLayer::onRandomPage));
-    randBtn->setPosition({ win.width - 22.f, win.height - 95.f });
+    randBtn->setPosition({ win.width - 22.f, win.height - 107.f });
     menu->addChild(randBtn);
 
     auto lastArrow = CCSprite::createWithSpriteFrameName("GJ_arrow_02_001.png");
@@ -486,7 +486,7 @@ bool GSLListLayer::init() {
     lastArrow->addChild(otherArrow);
     lastArrow->setScale(.4f);
     auto lastBtn = CCMenuItemSpriteExtra::create(lastArrow, this, menu_selector(GSLListLayer::onLastPage));
-    lastBtn->setPosition({ win.width - 26.f, win.height - 125.f });
+    lastBtn->setPosition({ win.width - 26.f, win.height - 137.f });
     menu->addChild(lastBtn);
 
     // Пояснение для Future Classic — слева
@@ -629,36 +629,50 @@ void GSLListLayer::selectList(std::string const& list) {
     loadPage();
 }
 
-// Зелёная кнопка с кубком и названием списка; ширина — по тексту,
-// правый край всегда прижат к краю экрана
+// Квадратная зелёная кнопка: кубок сверху, название списка снизу.
+// Название всегда помещается внутри квадрата (длинное — в две строки).
 void GSLListLayer::updateListButton() {
     if (m_listBtn) m_listBtn->removeFromParent();
     auto win = CCDirector::get()->getWinSize();
 
-    auto label = CCLabelBMFont::create(GSLManager::prettyListName(m_list).c_str(), "bigFont.fnt");
-    label->limitLabelWidth(150.f, .55f, .1f);
-    auto icon = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png");
-    float iconW = 0.f;
-    if (icon) {
-        icon->setScale(20.f / icon->getContentHeight());
-        iconW = icon->getScaledContentWidth() + 6.f;
-    }
-
-    float h = 32.f;
-    float w = 12.f + iconW + label->getScaledContentWidth() + 12.f;
+    float size = 46.f;
+    float pad = 5.f;
+    float inner = size - pad * 2;
     auto bg = CCScale9Sprite::create("GJ_button_01.png");
-    bg->setContentSize({ w, h });
-    if (icon) {
-        icon->setPosition({ 12.f + icon->getScaledContentWidth() / 2, h / 2 + 1.f });
+    bg->setContentSize({ size, size });
+
+    if (auto icon = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png")) {
+        icon->setScale(20.f / icon->getContentHeight());
+        icon->setPosition({ size / 2, size - pad - 10.f });
         bg->addChild(icon);
     }
-    label->setPosition({ 12.f + iconW + label->getScaledContentWidth() / 2, h / 2 + 1.f });
-    bg->addChild(label);
 
-    float scale = .75f;
-    bg->setScale(scale);
+    // слова названия — каждое отдельной строкой, все одним масштабом
+    auto words = utils::string::split(GSLManager::prettyListName(m_list), " ");
+    float textH = 16.f; // место под текст снизу
+    float scale = .5f;
+    std::vector<CCLabelBMFont*> lines;
+    for (auto& w : words) {
+        if (w.empty()) continue;
+        auto lbl = CCLabelBMFont::create(w.c_str(), "bigFont.fnt");
+        scale = std::min(scale, inner / lbl->getContentWidth());
+        lines.push_back(lbl);
+    }
+    if (!lines.empty()) {
+        float lineH = lines[0]->getContentHeight() * .8f;
+        scale = std::min(scale, textH / (lineH * lines.size()));
+        float y = pad + 1.f + lineH * scale * (lines.size() - .5f);
+        for (auto lbl : lines) {
+            lbl->setScale(scale);
+            lbl->setPosition({ size / 2, y });
+            bg->addChild(lbl);
+            y -= lineH * scale;
+        }
+    }
+
+    bg->setScale(.75f);
     m_listBtn = CCMenuItemSpriteExtra::create(bg, this, menu_selector(GSLListLayer::onPickList));
-    m_listBtn->setPosition({ win.width - 6.f - w * scale / 2, win.height - 32.f });
+    m_listBtn->setPosition({ win.width - 22.f, win.height - 34.f });
     m_menu->addChild(m_listBtn);
 }
 
