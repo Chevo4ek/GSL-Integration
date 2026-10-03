@@ -3,11 +3,28 @@
 ## v0.0.1
 <co>Work in progress — not released yet.</c>
 
-- List positions in level search and on the level page
+### Level search and level page
+- List positions under the difficulty face (<cy>#1 CL</c> or <cy>#1 Classic</c>)
 - Demon faces and difficulty from the list
-- GSL screen with list picker, pages, random page and search
-- Search filters: list position, length, completed by, created by
-- Info button with a link to the site
-- List rate (Featured, Epic, ...) shown as the face frame and on the level page
-- Settings: rank names, list rate, song name trimming, default list, GSL button + reminder, update notifications
-- Automatic sync with globalshittylist.com
+- List rate (Featured, Epic, ...) shown as the face frame and as text on the level page
+- List points in the level stats
+- Long song names no longer go over the level preview
+- Round GSL button in the level search screen
+
+### GSL screen
+- Real level cards, 10 per page, sorted by list position
+- Search by level name
+- Square list picker button with a trophy (Classic, Challenge, Spam, Future Classic)
+- Go to page, randomizer and last page buttons
+- Search filters: Unbounded / Top 75 / 150 / 300 / Custom, length, completed by, created by
+- Info button with the site description and a link to globalshittylist.com
+- Future Classic: extra note in the info window and an arrow pointing to it until it's read
+
+### Settings
+- Sections: Display, List screen, Sync
+- Rank names (short / full), list rate, song name trimming
+- Default list, GSL button on/off with a reminder when it's hidden
+- Check interval and notifications about list updates
+
+### Sync
+- Automatic sync with globalshittylist.com, list cached on disk
