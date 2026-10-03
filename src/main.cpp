@@ -127,8 +127,6 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         bottom = std::min(bottom, box.getMinY());
     }
 
-    if (!fullNames) return; // в карточках ранг рисуется значком на превью (см. decorateCell)
-
     float lineH = fullNames ? 14.f : 9.f;
     float y = bottom - (fullNames ? 7.f : 6.f);
     for (auto& e : entries) {
@@ -158,7 +156,7 @@ static bool insideMenuItem(CCNode* n) {
     return false;
 }
 
-// Оформление карточки: значок ранга на превью, очки листа, аккуратный ID,
+// Оформление карточки: очки листа, аккуратный ID,
 // название трека не заходит на превью.
 static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
     auto main = cell->m_mainLayer;
@@ -234,40 +232,6 @@ static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
         main->addChild(pts, 20);
     }
 
-    // 2. круглые значки ранга в правом нижнем углу превью
-    if (!entries.empty()) {
-        auto badges = CCNode::create();
-        badges->setID("gsl-rank-badges"_spr);
-        float bx = w - 16.f;
-        for (auto& e : entries) {
-            auto badge = CCNode::create();
-            auto circle = CCDrawNode::create();
-            circle->drawDot({ 0.f, 0.f }, 12.f, { 0.f, 0.f, 0.f, .55f });
-            auto lc = GSLManager::listColor(e.list);
-            badge->addChild(circle);
-
-            if (auto crown = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png")) {
-                crown->setScale(.3f);
-                crown->setPosition({ 0.f, 6.f });
-                badge->addChild(crown);
-            }
-            auto txt = CCLabelBMFont::create(fmt::format("#{}", e.rank).c_str(), "bigFont.fnt");
-            txt->limitLabelWidth(19.f, .3f, .1f);
-            txt->setPosition({ 0.f, -3.f });
-            badge->addChild(txt);
-
-            auto tag = CCLabelBMFont::create(GSLManager::shortListName(e.list).c_str(), "goldFont.fnt");
-            tag->setScale(.25f);
-            tag->setColor(lc);
-            tag->setPosition({ 0.f, -9.f });
-            badge->addChild(tag);
-
-            badge->setPosition({ bx, 15.f });
-            badges->addChild(badge);
-            bx -= 27.f;
-        }
-        main->addChild(badges, 30);
-    }
     (void)h;
 }
 
