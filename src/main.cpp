@@ -27,7 +27,8 @@ static GJDifficultySprite* findDifficulty(CCNode* node) {
 }
 
 // difficulty из API -> кадр мордашки GD и подпись
-static std::pair<int, char const*> demonFrame(std::string const& d) {
+static std::pair<int, char const*> demonFrame(std::string d) {
+    for (auto& c : d) c = (c == ' ' || c == '-') ? '_' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     if (d == "easy_demon") return { 7, "Easy Demon" };
     if (d == "medium_demon") return { 8, "Medium Demon" };
     if (d == "hard_demon") return { 6, "Hard Demon" };
@@ -107,11 +108,12 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     // самая нижняя точка столбика "мордашка / подпись / монетки"
     float bottom = diffBox.getMinY();
     if (diffLabel) bottom = std::min(bottom, worldBox(diffLabel).getMinY());
-    float range = fullNames ? 90.f : 55.f;
+    float range = fullNames ? 55.f : 45.f;
     for (auto n : nodes) {
         if (n == diff || !n->isVisible() || !typeinfo_cast<CCSprite*>(n)) continue;
         if (typeinfo_cast<GJDifficultySprite*>(n->getParent())) continue;
         auto box = worldBox(n);
+        if (box.size.width > 22.f || box.size.height > 22.f) continue; // монетки маленькие
         if (std::abs(box.getMidX() - cx) > 30.f) continue;
         if (box.getMaxY() > diffBox.getMinY() + 2.f) continue;
         if (box.getMaxY() < diffBox.getMinY() - range) continue;
@@ -142,7 +144,11 @@ class $modify(GSLLevelCell, LevelCell) {
         if (!level) return;
         auto entries = GSLManager::get()->find(level->m_levelID.value());
         if (!entries || entries->empty()) return;
-        if (auto diff = findDifficulty(m_mainLayer)) applyGSL(this, diff, *entries, false);
+        Ref<LevelCell> self = this;
+        auto list = *entries;
+        Loader::get()->queueInMainThread([self, list] {
+            if (auto diff = findDifficulty(self->m_mainLayer)) applyGSL(self, diff, list, false);
+        });
     }
 };
 
@@ -153,7 +159,11 @@ class $modify(GSLLevelInfo, LevelInfoLayer) {
         if (!level) return true;
         auto entries = GSLManager::get()->find(level->m_levelID.value());
         if (!entries || entries->empty()) return true;
-        if (auto diff = findDifficulty(this)) applyGSL(this, diff, *entries, true);
+        Ref<LevelInfoLayer> self = this;
+        auto list = *entries;
+        Loader::get()->queueInMainThread([self, list] {
+            if (auto diff = findDifficulty(self)) applyGSL(self, diff, list, true);
+        });
         return true;
     }
 };
@@ -163,10 +173,9 @@ class $modify(GSLSearchLayer, LevelSearchLayer) {
     bool init(int type) {
         if (!LevelSearchLayer::init(type)) return false;
 
-        auto text = CCLabelBMFont::create("GSL", "goldFont.fnt");
-        text->setScale(.75f);
-        auto spr = CircleButtonSprite::create(text, CircleBaseColor::Green, CircleBaseSize::Medium);
-        spr->setScale(.8f);
+        // круглая кнопка с логотипом GSL
+        auto spr = CCSprite::create("gsl_btn.png"_spr);
+        spr->setScale(42.f / spr->getContentWidth());
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLSearchLayer::onGSL));
         btn->setID("gsl-button"_spr);
 

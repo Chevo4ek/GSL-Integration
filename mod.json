@@ -6,6 +6,7 @@
 	"version": "v1.0.0",
 	"developer": "Chevo4ek",
 	"description": "Shows Global Shitty List positions in level search and syncs with globalshittylist.com",
+	"resources": { "sprites": ["resources/*.png"] },
 	"settings": {
 		"poll-interval": {
 			"name": "Check interval (seconds)",
