@@ -662,7 +662,7 @@ void GSLListLayer::updateListButton() {
 
     // слова названия — каждое отдельной строкой, все одним масштабом
     auto words = utils::string::split(GSLManager::prettyListName(m_list), " ");
-    float textH = 16.f; // место под текст снизу
+    float textH = 16.f; // максимальная высота надписи
     float scale = .5f;
     std::vector<CCLabelBMFont*> lines;
     for (auto& w : words) {
@@ -671,27 +671,29 @@ void GSLListLayer::updateListButton() {
         scale = std::min(scale, inner / lbl->getContentWidth());
         lines.push_back(lbl);
     }
-    // место под текст всегда одно и то же (как под две строки),
-    // поэтому кубок у всех списков стоит на одной высоте
-    float textTop = pad + 1.f + textH;
+    // кубок + надпись — одна группа, вся группа ровно по центру кнопки
+    // (центр чуть выше середины: у кнопки толще нижний край)
+    float cupH = 17.f, gap = 3.f;
+    float lineH = 0.f, blockH = 0.f;
     if (!lines.empty()) {
-        float lineH = lines[0]->getContentHeight() * .8f;
+        lineH = lines[0]->getContentHeight() * .8f;
         scale = std::min(scale, textH / (lineH * lines.size()));
-        float blockH = lineH * scale * lines.size();
-        float y = pad + 1.f + textH / 2 + blockH / 2 - lineH * scale / 2;
-        for (auto lbl : lines) {
-            lbl->setScale(scale);
-            lbl->setPosition({ size / 2, y });
-            bg->addChild(lbl);
-            y -= lineH * scale;
-        }
+        blockH = lineH * scale * lines.size();
+    }
+    float total = cupH + (lines.empty() ? 0.f : gap + blockH);
+    float bottom = size / 2 + 1.f - total / 2;
+
+    float y = bottom + blockH - lineH * scale / 2;
+    for (auto lbl : lines) {
+        lbl->setScale(scale);
+        lbl->setPosition({ size / 2, y });
+        bg->addChild(lbl);
+        y -= lineH * scale;
     }
 
-    // кубок — ровно посередине между верхним краем и надписью
     if (auto icon = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png")) {
-        float space = size - pad - textTop;
-        icon->setScale(std::min(20.f, space - 4.f) / icon->getContentHeight());
-        icon->setPosition({ size / 2, textTop + space / 2 });
+        icon->setScale(cupH / icon->getContentHeight());
+        icon->setPosition({ size / 2, bottom + total - cupH / 2 });
         bg->addChild(icon);
     }
 
