@@ -1,0 +1,16 @@
+{
+	"geode": "4.4.0",
+	"gd": { "win": "2.2081" },
+	"id": "daniel.gsl-integration",
+	"name": "Global Shitty List Integration",
+	"version": "v1.0.0",
+	"developer": "Daniel",
+	"description": "Shows Global Shitty List positions in level search and syncs with globalshittylist.com",
+	"settings": {
+		"poll-interval": {
+			"name": "Check interval (seconds)",
+			"description": "How often to check the site for changes",
+			"type": "int", "default": 60, "min": 20, "max": 600
+		}
+	}
+}
