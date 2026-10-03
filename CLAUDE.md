@@ -1,6 +1,6 @@
 # GSL Integration — notes for Claude
 
-Geode SDK v5.10.1 mod for Geometry Dash 2.2081 (Windows). Sources are in `src/`; the
+Geode SDK v5.10.1 mod for Geometry Dash 2.2081 (Windows + Android64/Android32). Sources are in `src/`; the
 copies of `.cpp/.hpp` in the repo root are old and not built.
 
 ## Rules

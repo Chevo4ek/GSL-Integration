@@ -29,5 +29,8 @@
 - Search bar mode: hide on scroll, arrow only or always shown
 - Check interval and notifications about list updates
 
+### Platforms
+- Android support (64-bit and 32-bit) next to Windows
+
 ### Sync
 - Automatic sync with globalshittylist.com, list cached on disk
