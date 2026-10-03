@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/ui/TextInput.hpp>
+#include <Geode/utils/web.hpp>
 #include "GSLManager.hpp"
 
 using namespace geode::prelude;
@@ -29,6 +30,7 @@ protected:
     void onNext(CCObject*);
     void onSearch(CCObject*);
     void onRefresh(CCObject*);
+    void onSite(CCObject*);
 
     void selectList(std::string const& list);
     void loadPage();
@@ -46,6 +48,7 @@ protected:
     TextInput* m_search = nullptr;
     CCLabelBMFont* m_pageLabel = nullptr;
     CCLabelBMFont* m_status = nullptr;
+    CCNode* m_note = nullptr;
     CCMenuItemSpriteExtra* m_prev = nullptr;
     CCMenuItemSpriteExtra* m_next = nullptr;
     std::vector<ButtonSprite*> m_tabSprites;

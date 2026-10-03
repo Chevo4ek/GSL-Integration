@@ -53,33 +53,57 @@ bool GSLListLayer::init() {
     refreshBtn->setPosition({ win.width - 30.f, 30.f });
     menu->addChild(refreshBtn);
 
-    // Вкладки списков — над рамкой, без наложения
+    // Рамка листа: по центру, чуть ниже середины
+    float listBottom = win.height / 2 - LIST_H / 2 - 42.f;
+    float listTop = listBottom + LIST_H + 30.f; // вместе с зелёной шапкой
+
+    // Вкладки списков — столбиком слева
     auto& lists = GSLManager::lists();
-    float tabGap = 88.f;
-    float startX = win.width / 2 - tabGap * (lists.size() - 1) / 2;
     for (size_t i = 0; i < lists.size(); i++) {
         auto spr = ButtonSprite::create(
-            GSLManager::prettyListName(lists[i]).c_str(), 80, true, "bigFont.fnt", "GJ_button_04.png", 24.f, .5f
+            GSLManager::prettyListName(lists[i]).c_str(), 70, true, "bigFont.fnt", "GJ_button_04.png", 24.f, .5f
         );
-        spr->setScale(.75f);
+        spr->setScale(.7f);
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLListLayer::onTab));
         btn->setTag(static_cast<int>(i));
-        btn->setPosition({ startX + tabGap * i, win.height - 20.f });
+        btn->setPosition({ 52.f, win.height - 70.f - 26.f * i });
         menu->addChild(btn);
         m_tabSprites.push_back(spr);
     }
 
-    // Поиск по названию
-    m_search = TextInput::create(240.f, "Search levels...", "bigFont.fnt");
-    m_search->setPosition({ win.width / 2 - 18.f, win.height - 50.f });
-    m_search->setScale(.85f);
+    // Пояснение для Future Classic (видно только на этой вкладке)
+    m_note = CCNode::create();
+    m_note->setPosition({ 52.f, win.height - 70.f - 26.f * lists.size() - 6.f });
+    {
+        char const* lines[] = { "Only levels with", "a GD ID are shown.", "Full list on site:" };
+        float y = 0.f;
+        for (auto line : lines) {
+            auto lbl = CCLabelBMFont::create(line, "chatFont.fnt");
+            lbl->setScale(.45f);
+            lbl->setPosition({ 0.f, y });
+            m_note->addChild(lbl);
+            y -= 9.f;
+        }
+        auto noteMenu = CCMenu::create();
+        noteMenu->setPosition({ 0.f, y - 8.f });
+        auto siteSpr = ButtonSprite::create("Website", "goldFont.fnt", "GJ_button_01.png", .6f);
+        siteSpr->setScale(.55f);
+        noteMenu->addChild(CCMenuItemSpriteExtra::create(siteSpr, this, menu_selector(GSLListLayer::onSite)));
+        m_note->addChild(noteMenu);
+    }
+    this->addChild(m_note, 5);
+
+    // Поиск — во всю ширину рамки, сразу над ней
+    float searchY = listTop + 19.f;
+    m_search = TextInput::create(LIST_W - 34.f, "Search levels...", "bigFont.fnt");
+    m_search->setPosition({ win.width / 2 - 17.f, searchY });
     m_search->setCallback([this](std::string const& text) { m_query = text; });
     this->addChild(m_search, 5);
 
     auto searchSpr = CCSprite::createWithSpriteFrameName("gj_findBtn_001.png");
-    searchSpr->setScale(.6f);
+    searchSpr->setScale(.65f);
     auto searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GSLListLayer::onSearch));
-    searchBtn->setPosition({ win.width / 2 + 100.f, win.height - 50.f });
+    searchBtn->setPosition({ win.width / 2 + LIST_W / 2 - 15.f, searchY });
     menu->addChild(searchBtn);
 
     // Страницы
@@ -97,7 +121,7 @@ bool GSLListLayer::init() {
     m_pageLabel = CCLabelBMFont::create("", "goldFont.fnt");
     m_pageLabel->setScale(.4f);
     m_pageLabel->setAnchorPoint({ 1.f, .5f });
-    m_pageLabel->setPosition({ win.width - 7.f, win.height - 50.f });
+    m_pageLabel->setPosition({ win.width - 5.f, win.height - 10.f });
     this->addChild(m_pageLabel, 5);
 
     m_status = CCLabelBMFont::create("", "bigFont.fnt");
@@ -154,7 +178,12 @@ void GSLListLayer::selectList(std::string const& list) {
     for (size_t i = 0; i < lists.size(); i++) {
         m_tabSprites[i]->updateBGImage(lists[i] == list ? "GJ_button_02.png" : "GJ_button_04.png");
     }
+    m_note->setVisible(list == "future");
     loadPage();
+}
+
+void GSLListLayer::onSite(CCObject*) {
+    web::openLinkInBrowser("https://globalshittylist.com");
 }
 
 std::vector<GSLEntry> GSLListLayer::filtered() const {
