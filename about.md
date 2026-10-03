@@ -1,14 +1,20 @@
 # Global Shitty List Integration
 
-Brings the **[Global Shitty List](https://globalshittylist.com)** right into Geometry Dash.
+This mod brings the <cy>core features</c> of [globalshittylist.com](https://globalshittylist.com) to GD.
 
-## Features
-- **List positions in search** — every level from the list shows its place (e.g. `#1 CL`) under its difficulty face
-- **Correct demon faces** — the face and difficulty text are taken from the list
-- **GSL screen** — browse Classic, Challenge, Spam and Future Classic lists with real level cards, pages and search
-- **Live sync** — the list updates automatically when the site's database changes
+## Mod Features:
 
-Short tags: **CL** — Classic, **CH** — Challenge, **SP** — Spam, **FC** — Future Classic.
+- A <cg>button</c> in the level search screen that opens the <cl>Global Shitty List</c>
+- <cy>Browse lists</c>: Classic, Challenge, Spam and Future Classic with real level cards
+- <cy>Search levels</c> by name on the list screen
+- <cy>Filter levels</c> by list position, length, completed by and created by
+- <cy>Level placements</c> from the <cl>Global Shitty List</c> displayed under the difficulty face (e.g. <cy>#1 CL</c>)
+- <cy>Demon difficulty</c> taken from the list instead of the in-game one (can be turned off)
+- <cy>List points</c> shown in the level stats
+- <cy>Live sync</c> — the list updates automatically when the site changes
 
-## Credits
-Randomizer button sprite — from [Integrated Demonlist](https://github.com/hiimjustin000/IntegratedDemonlist) by hiimjasmine00 (MIT).
+Short tags: <cy>CL</c> — Classic, <cr>CH</c> — Challenge, <cl>SP</c> — Spam, <cg>FC</c> — Future Classic.
+
+## Special Thanks
+
+- hiimjasmine00 (randomizer button and screen layout based on her mod [Integrated Demonlist](https://github.com/hiimjustin000/IntegratedDemonlist))
