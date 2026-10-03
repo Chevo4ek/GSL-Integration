@@ -13,7 +13,8 @@
 
 ### GSL screen
 - Real level cards, 10 per page, sorted by list position
-- Search by level name — search bar sits inside the list frame, styled like the list
+- Search by level name — search bar is part of the list frame, like in the game's own lists
+- The list frame is no longer recreated on every page, so the search text stays
 - Square list picker button with a trophy (Classic, Challenge, Spam, Future Classic), trophy and name centered
 - Go to page, randomizer and last page buttons
 - Search filters: Unbounded / Top 75 / 150 / 300 / Custom, length, completed by, created by
