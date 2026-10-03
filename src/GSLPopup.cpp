@@ -406,6 +406,31 @@ protected:
 
 // Полоса поиска внутри рамки, над списком (как в Global Demonlist)
 static constexpr float SEARCH_H = 30.f;
+// Цвета списка: синий фон карточек и тёмная полоска между ними
+static constexpr ccColor4B LIST_BG = { 0, 80, 200, 255 };
+static constexpr ccColor4B LIST_SEPARATOR = { 0, 40, 120, 255 };
+
+// Каждой видимой карточке — синий фон и полоску снизу (карточки создаются
+// при прокрутке, поэтому проверяем каждый кадр; это дёшево — их на экране 2–3)
+static void styleCells(BoomListView* listView) {
+    if (!listView || !listView->m_tableView || !listView->m_tableView->m_contentLayer) return;
+    auto content = listView->m_tableView->m_contentLayer;
+    if (!content->getChildren()) return;
+    for (auto node : CCArrayExt<CCNode*>(content->getChildren())) {
+        auto cell = typeinfo_cast<TableViewCell*>(node);
+        if (!cell) continue;
+        if (auto bg = cell->m_backgroundLayer) {
+            bg->setColor({ LIST_BG.r, LIST_BG.g, LIST_BG.b });
+            bg->setOpacity(LIST_BG.a);
+            bg->setVisible(true);
+        }
+        if (!cell->getChildByID("separator"_spr)) {
+            auto line = CCLayerColor::create(LIST_SEPARATOR, cell->m_width > 0 ? cell->m_width : LIST_W, 1.f);
+            line->setID("separator"_spr);
+            cell->addChild(line, 100);
+        }
+    }
+}
 // Высота всего блока: шапка 30 + полоса поиска + список + нижняя рамка 16
 static constexpr float BLOCK_H = 30.f + SEARCH_H + LIST_H + 16.f;
 
@@ -515,6 +540,11 @@ bool GSLListLayer::init() {
     );
     m_listLayer->setPosition({ win.width / 2 - LIST_W / 2, listBottom });
     this->addChild(m_listLayer, 1);
+
+    // Свой непрозрачный синий фон списка — не зависит от текстур-паков и фоновых картинок
+    auto listBg = CCLayerColor::create(LIST_BG, LIST_W, LIST_H + SEARCH_H);
+    listBg->setID("list-bg"_spr);
+    m_listLayer->addChild(listBg);
 
     // Поиск — полоса внутри рамки над списком, как в игре и в Global Demonlist
     {
@@ -956,8 +986,9 @@ static CCSprite* blurSprite(CCSprite* src, int level) {
         size = CCSize(std::max(1.f, size.width / step), std::max(1.f, size.height / step));
         auto rt = CCRenderTexture::create(static_cast<int>(size.width), static_cast<int>(size.height));
         if (!rt) return src;
+        // CCRenderTexture снимает область вокруг центра экрана — ставим картинку туда
         cur->setScale(cur->getScale() / step);
-        cur->setPosition(size / 2);
+        cur->setPosition(win / 2);
         rt->begin();
         cur->visit();
         rt->end();
@@ -1093,6 +1124,7 @@ void GSLListLayer::onToggleSearch(CCObject*) {
 // Следим за прокруткой: прячем поиск, только если пролистали вниз заметно
 // (мелкие движения и дрожание пальца не считаются)
 void GSLListLayer::update(float) {
+    if (m_listLayer) styleCells(m_listLayer->m_listView);
     if (m_searchAnimating || m_searchHidden || searchMode() != "Hide on scroll") return;
     auto listView = m_listLayer ? m_listLayer->m_listView : nullptr;
     if (!listView || !listView->m_tableView || !listView->m_tableView->m_contentLayer) return;
