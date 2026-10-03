@@ -51,6 +51,33 @@ static std::pair<int, char const*> demonFrame(std::string d) {
     return { -1, nullptr };
 }
 
+// rate из листа ("featured", "epic", ...) -> рамка мордашки как в GD
+static std::string lowerStr(std::string s) {
+    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return s;
+}
+
+static std::optional<GJFeatureState> rateState(std::string const& rate) {
+    auto r = lowerStr(rate);
+    if (r == "featured") return GJFeatureState::Featured;
+    if (r == "epic") return GJFeatureState::Epic;
+    if (r == "legendary") return GJFeatureState::Legendary;
+    if (r == "mythic") return GJFeatureState::Mythic;
+    if (r == "none" || r == "rated" || r == "unrated" || r == "star" || r == "stars") return GJFeatureState::None;
+    return std::nullopt; // неизвестное значение — не трогаем
+}
+
+static std::pair<std::string, ccColor3B> rateText(std::string const& rate) {
+    auto r = lowerStr(rate);
+    std::string text = rate;
+    if (!text.empty()) text[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(text[0])));
+    if (r == "featured") return { text, { 255, 220, 80 } };
+    if (r == "epic") return { text, { 255, 120, 60 } };
+    if (r == "legendary") return { text, { 200, 120, 255 } };
+    if (r == "mythic") return { text, { 120, 230, 255 } };
+    return { text, { 255, 255, 255 } };
+}
+
 static bool isDifficultyText(std::string const& s) {
     static std::vector<std::string> const names = {
         "Auto", "Easy", "Normal", "Hard", "Harder", "Insane", "N/A", "NA", "Unrated"
@@ -124,6 +151,12 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         }
     }
 
+    // рамка Featured/Epic/... из rate листа
+    bool showRate = Mod::get()->getSettingValue<bool>("show-rate");
+    if (showRate) {
+        if (auto st = rateState(entries.front().rate)) diff->updateFeatureState(*st);
+    }
+
     // самая нижняя точка столбика "мордашка / подпись / монетки"
     float bottom = diffBox.getMinY();
     if (diffLabel) bottom = std::min(bottom, worldBox(diffLabel).getMinY());
@@ -158,11 +191,13 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         y -= lineH;
     }
 
-    if (fullNames && Mod::get()->getSettingValue<bool>("show-rate")) {
+    if (fullNames && showRate) {
         for (auto& e : entries) {
-            if (e.rate.empty()) continue;
-            auto rate = CCLabelBMFont::create(fmt::format("Rate: {}", e.rate).c_str(), "goldFont.fnt");
-            rate->limitLabelWidth(110.f, .45f, .1f);
+            if (e.rate.empty() || rateState(e.rate) == GJFeatureState::None) continue;
+            auto [text, color] = rateText(e.rate);
+            auto rate = CCLabelBMFont::create(text.c_str(), "bigFont.fnt");
+            rate->limitLabelWidth(90.f, .4f, .1f);
+            rate->setColor(color);
             rate->setPosition(parent->convertToNodeSpace({ cx, y }));
             rate->setID("gsl-rank"_spr); // удаляется вместе с подписями мест
             parent->addChild(rate, 10);
@@ -256,19 +291,7 @@ static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
         lbl->setAnchorPoint({ 0.f, .5f });
         lbl->setPosition({ x, 0.f });
         pts->addChild(lbl);
-        x += lbl->getScaledContentWidth();
 
-        if (Mod::get()->getSettingValue<bool>("show-rate")) {
-            for (auto& e : entries) {
-                if (e.rate.empty()) continue;
-                auto rate = CCLabelBMFont::create(fmt::format("Rate {}", e.rate).c_str(), "goldFont.fnt");
-                rate->setScale(.4f);
-                rate->setAnchorPoint({ 0.f, .5f });
-                rate->setPosition({ x + 8.f, 0.f });
-                pts->addChild(rate);
-                break;
-            }
-        }
         pts->setPosition(main->convertToNodeSpace({ rowRight + 14.f, rowY }));
         main->addChild(pts, 20);
     }

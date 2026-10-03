@@ -36,7 +36,7 @@
 		},
 		"show-rate": {
 			"name": "Show list rate",
-			"description": "Show the level's <cy>rate</c> from the Global Shitty List in level search and on the level page.",
+			"description": "Show the level's <cy>rate</c> from the Global Shitty List (Featured, Epic, Legendary, Mythic) as the frame around the difficulty face, and as text on the level page.",
 			"type": "bool",
 			"default": true
 		},
