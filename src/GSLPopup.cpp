@@ -637,17 +637,12 @@ void GSLListLayer::updateListButton() {
     auto bg = CCScale9Sprite::create("GJ_button_01.png");
     bg->setContentSize({ size, size });
 
-    if (auto icon = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png")) {
-        icon->setScale(20.f / icon->getContentHeight());
-        icon->setPosition({ size / 2, size - pad - 10.f });
-        bg->addChild(icon);
-    }
-
     // слова названия — каждое отдельной строкой, все одним масштабом
     auto words = utils::string::split(GSLManager::prettyListName(m_list), " ");
     float textH = 16.f; // место под текст снизу
     float scale = .5f;
     std::vector<CCLabelBMFont*> lines;
+    float textTop = pad;
     for (auto& w : words) {
         if (w.empty()) continue;
         auto lbl = CCLabelBMFont::create(w.c_str(), "bigFont.fnt");
@@ -664,6 +659,15 @@ void GSLListLayer::updateListButton() {
             bg->addChild(lbl);
             y -= lineH * scale;
         }
+        textTop = pad + 1.f + lineH * scale * lines.size();
+    }
+
+    // кубок — ровно посередине между верхним краем и надписью
+    if (auto icon = CCSprite::createWithSpriteFrameName("rankIcon_1_001.png")) {
+        float space = size - pad - textTop;
+        icon->setScale(std::min(20.f, space - 4.f) / icon->getContentHeight());
+        icon->setPosition({ size / 2, textTop + space / 2 });
+        bg->addChild(icon);
     }
 
     bg->setScale(.75f);
