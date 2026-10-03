@@ -30,7 +30,7 @@ protected:
     void onSearch(CCObject*);
     void onRefresh(CCObject*);
     void onSite(CCObject*);
-    void onFutureInfo(CCObject*);
+    void onInfo(CCObject*);
     void onFilter(CCObject*);
     void onPickList(CCObject*);
     void onGoToPage(CCObject*);
