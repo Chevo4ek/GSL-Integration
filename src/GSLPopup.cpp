@@ -517,13 +517,15 @@ bool GSLListLayer::init() {
 
     // Поиск — полоса внутри рамки над списком, как в игре и в Global Demonlist
     {
+        // якорь сверху — при скрытии полоса плавно сжимается к заголовку
         auto stripMenu = CCMenu::create();
         stripMenu->ignoreAnchorPointForPosition(false);
-        stripMenu->setAnchorPoint({ 0.f, 0.f });
+        stripMenu->setAnchorPoint({ 0.f, 1.f });
         stripMenu->setContentSize({ LIST_W, SEARCH_H });
-        stripMenu->setPosition({ 0.f, LIST_H });
+        stripMenu->setPosition({ 0.f, LIST_H + SEARCH_H });
         stripMenu->setID("search-bar-menu"_spr);
         m_listLayer->addChild(stripMenu);
+        m_searchStrip = stripMenu;
 
         auto strip = CCLayerColor::create({ 194, 114, 62, 255 }, LIST_W, SEARCH_H);
         stripMenu->addChild(strip, -1);
@@ -562,6 +564,29 @@ bool GSLListLayer::init() {
         stripMenu->addChild(m_search);
     }
 
+    // Маленькая стрелочка: открыть/закрыть поиск (нет в режиме "Always shown")
+    if (searchMode() != "Always shown") {
+        auto arrowMenu = CCMenu::create();
+        arrowMenu->setPosition({ 0.f, 0.f });
+        m_listLayer->addChild(arrowMenu, 20);
+
+        auto arrow = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+        auto holder = CCNode::create();
+        holder->setContentSize({ 16.f, 16.f });
+        auto bgDot = CCScale9Sprite::create("GJ_button_04.png");
+        bgDot->setContentSize({ 32.f, 32.f });
+        bgDot->setScale(.5f);
+        bgDot->setPosition({ 8.f, 8.f });
+        holder->addChild(bgDot);
+        arrow->setScale(10.f / arrow->getContentHeight());
+        arrow->setPosition({ 8.f, 8.f });
+        arrow->setTag(1);
+        holder->addChild(arrow);
+        m_searchToggle = CCMenuItemSpriteExtra::create(holder, this, menu_selector(GSLListLayer::onToggleSearch));
+        m_searchToggle->setPosition({ LIST_W / 2, LIST_H + SEARCH_H - 1.f });
+        arrowMenu->addChild(m_searchToggle);
+    }
+
     // Стрелки страниц — одинаковые, на одном расстоянии от рамки
     float arrowGap = 32.f;
     auto prevSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
@@ -583,6 +608,16 @@ bool GSLListLayer::init() {
     this->addChild(m_status, 10);
 
     this->setKeypadEnabled(true);
+    if (searchMode() == "Arrow only") {
+        m_searchHidden = true;
+        m_searchStrip->setVisible(false);
+        m_searchStrip->setScaleY(0.f);
+        if (m_searchToggle) m_searchToggle->getNormalImage()->getChildByTag(1)->setRotation(-90.f);
+    }
+    else if (m_searchToggle) {
+        m_searchToggle->getNormalImage()->getChildByTag(1)->setRotation(90.f);
+    }
+    this->scheduleUpdate();
     // лист по умолчанию — из настроек
     auto def = Mod::get()->getSettingValue<std::string>("default-list");
     for (auto& l : GSLManager::lists()) {
@@ -881,12 +916,101 @@ void GSLListLayer::showLevels(CCArray* levels) {
     auto arr = CCArray::create();
     for (auto lvl : sorted) arr->addObject(lvl);
 
+    m_shownLevels = arr;
+    rebuildListView(false);
+}
+
+// ---------- прячущийся поиск ----------
+
+std::string GSLListLayer::searchMode() const {
+    return Mod::get()->getSettingValue<std::string>("search-bar-mode");
+}
+
+// Список под поиском: когда поиск спрятан, список выше на высоту полосы.
+// keepScroll — не сдвигать уровни на экране при смене высоты.
+void GSLListLayer::rebuildListView(bool keepScroll) {
+    if (!m_shownLevels) return;
+    float oldY = 0.f;
+    bool hadOld = false;
     if (auto old = m_listLayer->m_listView) {
+        if (old->m_tableView && old->m_tableView->m_contentLayer) {
+            oldY = old->m_tableView->m_contentLayer->getPositionY();
+            hadOld = true;
+        }
         old->removeFromParent();
         old->release();
     }
-    auto listView = CustomListView::create(arr, BoomListType::Level, LIST_H, LIST_W);
+    float h = LIST_H + (m_searchHidden ? SEARCH_H : 0.f);
+    auto listView = CustomListView::create(m_shownLevels, BoomListType::Level, h, LIST_W);
     listView->retain();
     m_listLayer->addChild(listView, 6, 9);
     m_listLayer->m_listView = listView;
+
+    auto content = listView->m_tableView ? listView->m_tableView->m_contentLayer : nullptr;
+    if (content && keepScroll && hadOld) {
+        // низ списка на месте; не даём уехать выше начала или ниже конца
+        float minY = h - content->getContentHeight();
+        content->setPositionY(std::clamp(oldY, std::min(minY, 0.f), std::max(minY, 0.f)));
+    }
+    m_lastScrollY = content ? content->getPositionY() : 0.f;
+    m_scrollAccum = 0.f;
+}
+
+void GSLListLayer::setSearchHidden(bool hidden) {
+    if (hidden == m_searchHidden || m_searchAnimating || !m_searchStrip) return;
+    m_searchAnimating = true;
+    m_searchHidden = hidden;
+    float t = .22f;
+
+    if (m_searchToggle) {
+        if (auto arrow = m_searchToggle->getNormalImage()->getChildByTag(1)) {
+            arrow->stopAllActions();
+            // спрятан — стрелка вниз (открыть), открыт — вверх (закрыть)
+            arrow->runAction(CCEaseInOut::create(CCRotateTo::create(t, hidden ? -90.f : 90.f), 2.f));
+        }
+    }
+
+    Ref<GSLListLayer> self = this;
+    m_searchStrip->stopAllActions();
+    if (hidden) {
+        // полоса плавно сжимается к заголовку, потом список занимает её место
+        m_searchStrip->runAction(CCSequence::create(
+            CCEaseInOut::create(CCScaleTo::create(t, 1.f, 0.f), 2.f),
+            CallFuncExt::create([self] {
+                self->m_searchStrip->setVisible(false);
+                self->rebuildListView(true);
+                self->m_searchAnimating = false;
+            }),
+            nullptr
+        ));
+    }
+    else {
+        // список сразу уступает место, полоса плавно выезжает
+        rebuildListView(true);
+        m_searchStrip->setVisible(true);
+        m_searchStrip->setScaleY(0.f);
+        m_searchStrip->runAction(CCSequence::create(
+            CCEaseInOut::create(CCScaleTo::create(t, 1.f, 1.f), 2.f),
+            CallFuncExt::create([self] { self->m_searchAnimating = false; }),
+            nullptr
+        ));
+    }
+}
+
+void GSLListLayer::onToggleSearch(CCObject*) {
+    setSearchHidden(!m_searchHidden);
+}
+
+// Следим за прокруткой: прячем поиск, только если пролистали вниз заметно
+// (мелкие движения и дрожание пальца не считаются)
+void GSLListLayer::update(float) {
+    if (m_searchAnimating || m_searchHidden || searchMode() != "Hide on scroll") return;
+    auto listView = m_listLayer ? m_listLayer->m_listView : nullptr;
+    if (!listView || !listView->m_tableView || !listView->m_tableView->m_contentLayer) return;
+
+    float y = listView->m_tableView->m_contentLayer->getPositionY();
+    float delta = y - m_lastScrollY; // > 0 — листаем вниз по списку
+    m_lastScrollY = y;
+    m_scrollAccum = std::max(0.f, m_scrollAccum + delta);
+    if (m_scrollAccum > 45.f) setSearchHidden(true);
 }
