@@ -489,27 +489,18 @@ bool GSLListLayer::init() {
     lastBtn->setPosition({ win.width - 26.f, win.height - 137.f });
     menu->addChild(lastBtn);
 
-    // Пояснение для Future Classic — слева
-    m_note = CCNode::create();
-    m_note->setPosition({ 50.f, midY + 20.f });
+    // Future Classic: синяя «i» в левом верхнем углу рамки — пояснение и ссылка на сайт
     {
-        char const* lines[] = { "Only levels with", "a GD ID are shown.", "Full list on site:" };
-        float y = 0.f;
-        for (auto line : lines) {
-            auto lbl = CCLabelBMFont::create(line, "chatFont.fnt");
-            lbl->setScale(.45f);
-            lbl->setPosition({ 0.f, y });
-            m_note->addChild(lbl);
-            y -= 9.f;
-        }
         auto noteMenu = CCMenu::create();
-        noteMenu->setPosition({ 0.f, y - 8.f });
-        auto siteSpr = ButtonSprite::create("Website", "goldFont.fnt", "GJ_button_01.png", .6f);
-        siteSpr->setScale(.55f);
-        noteMenu->addChild(CCMenuItemSpriteExtra::create(siteSpr, this, menu_selector(GSLListLayer::onSite)));
-        m_note->addChild(noteMenu);
+        noteMenu->setPosition({ 0.f, 0.f });
+        auto infoSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+        infoSpr->setScale(.7f);
+        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(GSLListLayer::onFutureInfo));
+        infoBtn->setPosition({ win.width / 2 - LIST_W / 2 + 16.f, listBottom + LIST_H + 15.f });
+        noteMenu->addChild(infoBtn);
+        m_note = noteMenu;
+        this->addChild(m_note, 5); // поверх рамки списка (у неё z = 1)
     }
-    this->addChild(m_note, 5);
 
     // Поиск — шириной с рамку, с отступом над ней; справа фильтр и лупа
     float searchY = listTop + 10.f + 15.f;
@@ -674,6 +665,17 @@ void GSLListLayer::updateListButton() {
     m_listBtn = CCMenuItemSpriteExtra::create(bg, this, menu_selector(GSLListLayer::onPickList));
     m_listBtn->setPosition({ win.width - 22.f, win.height - 34.f });
     m_menu->addChild(m_listBtn);
+}
+
+void GSLListLayer::onFutureInfo(CCObject*) {
+    createQuickPopup(
+        "Future Classic",
+        "Only levels with a <cy>GD ID</c> are shown.\nFull list on the site:",
+        "OK", "Website",
+        [](FLAlertLayer*, bool website) {
+            if (website) web::openLinkInBrowser("https://globalshittylist.com");
+        }
+    );
 }
 
 void GSLListLayer::onSite(CCObject*) {
