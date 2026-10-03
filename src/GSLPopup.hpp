@@ -14,10 +14,10 @@ public:
     static CCScene* scene();
     static GSLListLayer* create();
 
-    void loadLevelsFinished(CCArray* levels, char const* key, int type);
-    void loadLevelsFinished(CCArray* levels, char const* key);
-    void loadLevelsFailed(char const* key, int type);
-    void loadLevelsFailed(char const* key);
+    void loadLevelsFinished(CCArray* levels, char const* key, int type) override;
+    void loadLevelsFinished(CCArray* levels, char const* key) override;
+    void loadLevelsFailed(char const* key, int type) override;
+    void loadLevelsFailed(char const* key) override;
 
 protected:
     bool init() override;
