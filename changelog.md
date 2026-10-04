@@ -9,6 +9,7 @@
 - List rate (Featured, Epic, ...) shown as the face frame and as text on the level page
 - List points in the level stats
 - Long song names no longer go over the level preview
+- Works with the More Difficulties mod: its Casual/Tough/Cruel face no longer covers the list's demon face
 - Round GSL button in the level search screen
 
 ### GSL screen

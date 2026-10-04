@@ -80,7 +80,8 @@ static std::pair<std::string, ccColor3B> rateText(std::string const& rate) {
 
 static bool isDifficultyText(std::string const& s) {
     static std::vector<std::string> const names = {
-        "Auto", "Easy", "Normal", "Hard", "Harder", "Insane", "N/A", "NA", "Unrated"
+        "Auto", "Easy", "Normal", "Hard", "Harder", "Insane", "N/A", "NA", "Unrated",
+        "Casual", "Tough", "Cruel" // сложности из мода More Difficulties
     };
     if (s.find("Demon") != std::string::npos) return true;
     return std::find(names.begin(), names.end(), s) != names.end();
@@ -139,6 +140,15 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     auto [frame, text] = demonFrame(entries.front().difficulty);
     if (frame > 0 && Mod::get()->getSettingValue<bool>("replace-face")) {
         diff->updateDifficultyFrame(frame, GJDifficultyName::Short);
+
+        // Мод More Difficulties кладёт свою мордашку (Casual/Tough/Cruel) поверх
+        // игровой, а игровую делает прозрачной — прячем его, показываем нашу
+        for (auto n : nodes) {
+            std::string nodeId = n->getID().data();
+            if (nodeId.find("more-difficulties-spr") != std::string::npos) n->setVisible(false);
+        }
+        diff->setOpacity(255);
+        diff->setVisible(true);
         if (diffLabel) {
             while (auto old = diffLabel->getParent()->getChildByID("gsl-diff"_spr)) old->removeFromParent();
             auto own = CCLabelBMFont::create(text, diffLabel->getFntFile());
