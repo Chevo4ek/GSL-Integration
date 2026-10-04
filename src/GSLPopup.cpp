@@ -191,7 +191,8 @@ protected:
             a->setScale(.35f);
             a->setFlipX(flip);
             auto b = CCMenuItemSpriteExtra::create(a, this, cb);
-            b->setPosition(m_mainLayer->getContentSize() / 2 + CCPoint{ x + dx, H / 2 + y - 4.f - H / 2 });
+            // те же координаты, что у Anchor::Top: середина сверху + смещение
+            b->setPosition({ W / 2 + x + dx, H + y - 4.f });
             menu->addChild(b);
         };
         mk(false, prev, -88.f);
