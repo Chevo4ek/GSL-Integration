@@ -144,6 +144,24 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
                 if (!e.rate.empty() && e.rate.back() == '.') e.rate.pop_back();
             }
         }
+        // категория / качество / «новый» — названия полей на сайте могут отличаться,
+        // берём первое найденное
+        auto str = [&](std::initializer_list<char const*> keys) {
+            for (auto k : keys) {
+                if (!v.contains(k)) continue;
+                auto& f = v[k];
+                if (f.isString()) return f.asString().unwrapOr("");
+                if (f.isObject() && f.contains("name")) return f["name"].asString().unwrapOr("");
+                if (f.isNumber()) return fmt::format("{}", f.asInt().unwrapOr(0));
+            }
+            return std::string();
+        };
+        e.category = str({ "category", "tier", "section", "group" });
+        e.quality  = str({ "quality", "qualityTier", "quality_tier", "qualityLevel" });
+        for (auto k : { "isNew", "is_new", "new" }) {
+            if (v.contains(k) && v[k].isBool()) { e.isNew = v[k].asBool().unwrapOr(false); break; }
+        }
+
         // victors: строки или объекты — берём ник из любого подходящего поля
         if (auto vs = v["victors"].asArray()) {
             for (auto& vic : vs.unwrap()) {
@@ -201,6 +219,25 @@ std::vector<GSLEntry> GSLManager::getList(std::string const& list) const {
     for (auto& e : m_all) if (e.list == list) out.push_back(e);
     std::sort(out.begin(), out.end(), [](auto& a, auto& b) { return a.rank < b.rank; });
     return out;
+}
+
+std::vector<std::string> const& GSLManager::categoryOrder() {
+    static std::vector<std::string> const order = { "Main", "Extended", "Advanced", "Unbounded" };
+    return order;
+}
+
+std::string GSLManager::categoryOf(GSLEntry const& e) {
+    if (!e.category.empty()) {
+        // приводим к виду "Main", "Extended", ...
+        std::string c = e.category;
+        for (auto& ch : c) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        if (!c.empty()) c[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(c[0])));
+        return c;
+    }
+    if (e.rank <= 75) return "Main";
+    if (e.rank <= 150) return "Extended";
+    if (e.rank <= 300) return "Advanced";
+    return "Unbounded";
 }
 
 std::string GSLManager::prettyListName(std::string const& list) {

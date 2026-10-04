@@ -99,87 +99,8 @@ protected:
     }
 };
 
-// Маленькое окно с полем для числа (Custom Top N)
-class GSLNumberPopup : public Popup {
-public:
-    static GSLNumberPopup* create(char const* title, int value, std::function<void(int)> done) {
-        auto ret = new GSLNumberPopup();
-        ret->m_done = std::move(done);
-        if (ret->init(title, value)) { ret->autorelease(); return ret; }
-        delete ret;
-        return nullptr;
-    }
-protected:
-    std::function<void(int)> m_done;
-    TextInput* m_input = nullptr;
-    bool init(char const* title, int value) {
-        if (!Popup::init(220.f, 130.f)) return false;
-        this->setTitle(title);
-        m_input = TextInput::create(120.f, "Number", "bigFont.fnt");
-        m_input->setCommonFilter(CommonFilter::Uint);
-        if (value > 0) m_input->setString(std::to_string(value));
-        m_mainLayer->addChildAtPosition(m_input, Anchor::Center, { 0.f, 5.f });
-        auto spr = ButtonSprite::create("OK", "goldFont.fnt", "GJ_button_01.png", .8f);
-        auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLNumberPopup::onOK));
-        m_buttonMenu->addChildAtPosition(btn, Anchor::Bottom, { 0.f, 25.f });
-        return true;
-    }
-    void onOK(CCObject*) {
-        int v = std::atoi(m_input->getString().c_str());
-        if (v > 0 && m_done) m_done(v);
-        this->onClose(nullptr);
-    }
-};
-
-// Выбор любых длин (Custom length): Tiny ... XL + Platformer
-class GSLLengthPopup : public Popup {
-public:
-    static GSLLengthPopup* create(int mask, std::function<void(int)> done) {
-        auto ret = new GSLLengthPopup();
-        ret->m_mask = mask;
-        ret->m_done = std::move(done);
-        if (ret->init()) { ret->autorelease(); return ret; }
-        delete ret;
-        return nullptr;
-    }
-protected:
-    int m_mask = 0;
-    std::function<void(int)> m_done;
-    bool init() {
-        if (!Popup::init(240.f, 200.f)) return false;
-        this->setTitle("Custom length");
-        char const* names[] = { "Tiny", "Short", "Medium", "Long", "XL", "Platformer" };
-        auto menu = CCMenu::create();
-        menu->setContentSize({ 200.f, 120.f });
-        menu->ignoreAnchorPointForPosition(false);
-        for (int i = 0; i < 6; i++) {
-            float x = (i % 2) * 100.f + 15.f;
-            float y = 105.f - (i / 2) * 40.f;
-            auto t = CCMenuItemToggler::createWithStandardSprites(this, menu_selector(GSLLengthPopup::onToggle), .6f);
-            t->toggle(m_mask & (1 << i));
-            t->setTag(i);
-            t->setPosition({ x, y });
-            menu->addChild(t);
-            auto lbl = CCLabelBMFont::create(names[i], "bigFont.fnt");
-            lbl->limitLabelWidth(70.f, .4f, .1f);
-            lbl->setAnchorPoint({ 0.f, .5f });
-            lbl->setPosition({ x + 18.f, y });
-            menu->addChild(lbl);
-        }
-        m_mainLayer->addChildAtPosition(menu, Anchor::Center, { 0.f, 0.f });
-        auto spr = ButtonSprite::create("OK", "goldFont.fnt", "GJ_button_01.png", .8f);
-        auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLLengthPopup::onOK));
-        m_buttonMenu->addChildAtPosition(btn, Anchor::Bottom, { 0.f, 25.f });
-        return true;
-    }
-    void onToggle(CCObject* sender) { m_mask ^= 1 << sender->getTag(); }
-    void onOK(CCObject*) {
-        if (m_done) m_done(m_mask);
-        this->onClose(nullptr);
-    }
-};
-
-// Фильтры — как окно фильтров в Global Demonlist
+// Фильтры — как на сайте (Category, Length, Only new, Quality, Sort by),
+// но в стиле GD. Плюс Completed by / Created by.
 class GSLFilterPopup : public Popup {
 public:
     static GSLFilterPopup* create(GSLListLayer* layer) {
@@ -190,209 +111,233 @@ public:
         return nullptr;
     }
 protected:
-    static constexpr int CUSTOM = -1;
-    static constexpr int PRESET_LENGTHS = 0b011110; // Short..XL
-
     GSLListLayer* m_layer = nullptr;
-    int m_rank = 0;
-    int m_lengthMask = 0;
+
+    // выбранные значения (применяются по Apply)
+    std::string m_category;
+    int m_length = 0; // 0 = все, иначе бит длины
+    bool m_onlyNew = false;
+    std::string m_quality;
+    int m_sort = 0;
     bool m_completedBy = false, m_createdBy = false;
-    std::vector<std::pair<int, CCLabelBMFont*>> m_rankLabels;
-    std::vector<std::pair<int, CCLabelBMFont*>> m_lengthLabels;
+
+    std::vector<std::string> m_categories; // "" = All
+    std::vector<std::string> m_qualities;  // "" = All
+    std::vector<std::pair<std::string, ButtonSprite*>> m_categoryBtns;
+    std::vector<std::pair<int, ButtonSprite*>> m_lengthBtns;
+    CCLabelBMFont* m_qualityLabel = nullptr;
+    CCLabelBMFont* m_sortLabel = nullptr;
     TextInput* m_victorInput = nullptr;
     TextInput* m_creatorInput = nullptr;
 
-    // Ряд: иконка слева, подписи по ширине рамки (никогда не вылезают), шестерёнка справа
-    void addRow(float y, CCSprite* icon, std::vector<std::pair<int, char const*>> const& items,
-                SEL_MenuHandler onItem, SEL_MenuHandler onGear, std::vector<std::pair<int, CCLabelBMFont*>>& out) {
-        float boxW = m_mainLayer->getContentWidth() - 30.f;
-        float boxH = 46.f;
+    static constexpr float W = 440.f, H = 290.f;
+
+    CCLabelBMFont* header(char const* text, float y) {
+        auto lbl = CCLabelBMFont::create(text, "goldFont.fnt");
+        lbl->setScale(.45f);
+        lbl->setAnchorPoint({ 0.f, .5f });
+        m_mainLayer->addChildAtPosition(lbl, Anchor::TopLeft, { 18.f, y });
+        return lbl;
+    }
+
+    CCScale9Sprite* box(float y, float h) {
         auto bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
         bg->setColor({ 0, 0, 0 });
         bg->setOpacity(60);
-        bg->setContentSize({ boxW, boxH });
+        bg->setContentSize({ W - 24.f, h });
         m_mainLayer->addChildAtPosition(bg, Anchor::Top, { 0.f, y });
-
-        auto menu = CCMenu::create();
-        menu->setContentSize({ boxW, boxH });
-        menu->ignoreAnchorPointForPosition(false);
-        m_mainLayer->addChildAtPosition(menu, Anchor::Top, { 0.f, y });
-
-        float left = 10.f;
-        if (icon) {
-            icon->setScale(30.f / std::max(icon->getContentWidth(), icon->getContentHeight()));
-            icon->setPosition({ left + 15.f, boxH / 2 });
-            menu->addChild(icon);
-            left += 36.f;
-        }
-        float right = boxW - 8.f;
-        auto gearSpr = CCSprite::createWithSpriteFrameName("GJ_optionsBtn02_001.png");
-        if (!gearSpr) gearSpr = CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
-        if (gearSpr) {
-            gearSpr->setScale(28.f / gearSpr->getContentWidth());
-            auto gear = CCMenuItemSpriteExtra::create(gearSpr, this, onGear);
-            gear->setPosition({ right - 14.f, boxH / 2 });
-            menu->addChild(gear);
-            right -= 34.f;
-        }
-
-        // подбираем один масштаб для всех подписей, чтобы они влезли с отступами
-        std::vector<CCLabelBMFont*> labels;
-        float textW = 0.f;
-        for (auto& [val, name] : items) {
-            auto lbl = CCLabelBMFont::create(name, "bigFont.fnt");
-            labels.push_back(lbl);
-            textW += lbl->getContentWidth();
-        }
-        // одинаковые промежутки между подписями; если тесно — уменьшаем шрифт
-        float minGap = 8.f;
-        float n = static_cast<float>(items.size());
-        float scale = std::min(.45f, (right - left - minGap * (n + 1)) / textW);
-        float gap = (right - left - textW * scale) / (n + 1);
-        float x = left + gap;
-        for (size_t i = 0; i < items.size(); i++) {
-            auto lbl = labels[i];
-            lbl->setScale(scale);
-            auto btn = CCMenuItemSpriteExtra::create(lbl, this, onItem);
-            btn->setTag(items[i].first);
-            btn->setPosition({ x + lbl->getScaledContentWidth() / 2, boxH / 2 });
-            menu->addChild(btn);
-            out.push_back({ items[i].first, lbl });
-            x += lbl->getScaledContentWidth() + gap;
-        }
+        return bg;
     }
 
-    void addCheck(CCMenu* menu, float x, float y, char const* text, bool on, SEL_MenuHandler cb,
-                  char const* info, CCMenuItemToggler** out = nullptr) {
-        auto t = CCMenuItemToggler::createWithStandardSprites(this, cb, .65f);
-        t->toggle(on);
-        t->setPosition({ x, y });
-        menu->addChild(t);
-        if (out) *out = t;
-        auto lbl = CCLabelBMFont::create(text, "bigFont.fnt");
-        lbl->limitLabelWidth(80.f, .45f, .1f);
-        lbl->setAnchorPoint({ 0.f, .5f });
-        lbl->setPosition({ x + 18.f, y - 1.f });
-        menu->addChild(lbl);
+    // ряд кнопок-«таблеток», слева направо, ужимается, если не помещается
+    template <class T>
+    void chipRow(float y, std::vector<std::pair<T, std::string>> const& items, SEL_MenuHandler cb,
+                 std::vector<std::pair<T, ButtonSprite*>>& out) {
+        auto menu = CCMenu::create();
+        menu->setContentSize({ W - 36.f, 26.f });
+        menu->ignoreAnchorPointForPosition(false);
+        menu->setLayout(RowLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setAutoScale(true));
+        for (size_t i = 0; i < items.size(); i++) {
+            auto spr = ButtonSprite::create(items[i].second.c_str(), "bigFont.fnt", "GJ_button_04.png", .6f);
+            spr->setScale(.6f);
+            auto btn = CCMenuItemSpriteExtra::create(spr, this, cb);
+            btn->setTag(static_cast<int>(i));
+            menu->addChild(btn);
+            out.push_back({ items[i].first, spr });
+        }
+        menu->updateLayout();
+        m_mainLayer->addChildAtPosition(menu, Anchor::Top, { 0.f, y });
+    }
 
-        auto infoSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-        infoSpr->setScale(.45f);
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(GSLFilterPopup::onInfo));
-        infoBtn->setUserObject("info", CCString::create(info));
-        infoBtn->setPosition({ x + 18.f + lbl->getScaledContentWidth() + 5.f, y + 9.f });
-        menu->addChild(infoBtn);
+    // «◀ значение ▶» как в настройках GD
+    CCLabelBMFont* selector(float x, float y, char const* title, SEL_MenuHandler prev, SEL_MenuHandler next) {
+        auto t = CCLabelBMFont::create(title, "goldFont.fnt");
+        t->setScale(.4f);
+        m_mainLayer->addChildAtPosition(t, Anchor::Top, { x, y + 14.f });
+
+        auto bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+        bg->setColor({ 0, 0, 0 });
+        bg->setOpacity(90);
+        bg->setContentSize({ 150.f, 24.f });
+        m_mainLayer->addChildAtPosition(bg, Anchor::Top, { x, y - 4.f });
+
+        auto value = CCLabelBMFont::create("", "bigFont.fnt");
+        m_mainLayer->addChildAtPosition(value, Anchor::Top, { x, y - 4.f });
+
+        auto menu = CCMenu::create();
+        menu->setPosition({ 0.f, 0.f });
+        auto mk = [&](bool flip, SEL_MenuHandler cb, float dx) {
+            auto a = CCSprite::createWithSpriteFrameName("GJ_arrow_01_001.png");
+            a->setScale(.35f);
+            a->setFlipX(flip);
+            auto b = CCMenuItemSpriteExtra::create(a, this, cb);
+            b->setPosition(m_mainLayer->getContentSize() / 2 + CCPoint{ x + dx, H / 2 + y - 4.f - H / 2 });
+            menu->addChild(b);
+        };
+        mk(false, prev, -88.f);
+        mk(true, next, 88.f);
+        m_mainLayer->addChild(menu, 5);
+        return value;
     }
 
     bool init() {
-        if (!Popup::init(420.f, 270.f)) return false;
-        this->setTitle("Search Filters", "goldFont.fnt", .9f);
-        m_rank = m_layer->m_rankLimit;
-        m_lengthMask = m_layer->m_lengthMask;
+        if (!Popup::init(W, H)) return false;
+        this->setTitle("Filters", "goldFont.fnt", .9f);
+
+        m_category = m_layer->m_category;
+        m_length = m_layer->m_lengthMask;
+        m_onlyNew = m_layer->m_onlyNew;
+        m_quality = m_layer->m_quality;
+        m_sort = m_layer->m_sort;
         m_completedBy = m_layer->m_completedBy;
         m_createdBy = m_layer->m_onlyCreator;
 
-        // Ряд 1: места в листе
-        addRow(-55.f, CCSprite::createWithSpriteFrameName("diffIcon_10_btn_001.png"),
-            { { 0, "Unbounded" }, { 75, "Top 75" }, { 150, "Top 150" }, { 300, "Top 300" }, { CUSTOM, "Custom" } },
-            menu_selector(GSLFilterPopup::onRank), menu_selector(GSLFilterPopup::onRankGear), m_rankLabels);
+        // варианты берём из самого листа: какие категории/качества реально есть
+        auto list = GSLManager::get()->getList(m_layer->currentList());
+        m_categories.push_back("");
+        for (auto& c : GSLManager::categoryOrder()) {
+            if (std::any_of(list.begin(), list.end(), [&](auto& e) { return GSLManager::categoryOf(e) == c; }))
+                m_categories.push_back(c);
+        }
+        for (auto& e : list) {
+            auto c = GSLManager::categoryOf(e);
+            if (std::find(m_categories.begin(), m_categories.end(), c) == m_categories.end()) m_categories.push_back(c);
+        }
+        m_qualities.push_back("");
+        for (auto& e : list) {
+            if (!e.quality.empty() && std::find(m_qualities.begin(), m_qualities.end(), e.quality) == m_qualities.end())
+                m_qualities.push_back(e.quality);
+        }
+        bool hasNew = std::any_of(list.begin(), list.end(), [](auto& e) { return e.isNew; });
 
-        // Ряд 2: длина
-        addRow(-109.f, CCSprite::createWithSpriteFrameName("GJ_timeIcon_001.png"),
-            { { 1 << 1, "Short" }, { 1 << 2, "Medium" }, { 1 << 3, "Long" }, { 1 << 4, "XL" }, { CUSTOM, "Custom" } },
-            menu_selector(GSLFilterPopup::onLength), menu_selector(GSLFilterPopup::onLengthGear), m_lengthLabels);
+        // CATEGORY
+        header("CATEGORY", -36.f);
+        std::vector<std::pair<std::string, std::string>> cats;
+        for (auto& c : m_categories) cats.push_back({ c, c.empty() ? "All" : c });
+        chipRow(-56.f, cats, menu_selector(GSLFilterPopup::onCategory), m_categoryBtns);
 
-        // Ряд 3: галочки и поля
-        float boxW = m_mainLayer->getContentWidth() - 30.f;
-        float boxH = 74.f;
-        auto bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
-        bg->setColor({ 0, 0, 0 });
-        bg->setOpacity(60);
-        bg->setContentSize({ boxW, boxH });
-        m_mainLayer->addChildAtPosition(bg, Anchor::Top, { 0.f, -180.f });
+        // LENGTH
+        header("LENGTH", -80.f);
+        std::vector<std::pair<int, std::string>> lens = {
+            { 0, "All lengths" }, { 1 << 2, "Medium" }, { 1 << 3, "Long" }, { 1 << 4, "XL" }
+        };
+        chipRow(-100.f, lens, menu_selector(GSLFilterPopup::onLength), m_lengthBtns);
 
+        // Only new · Completed by · Created by
+        box(-138.f, 40.f);
         auto checks = CCMenu::create();
-        checks->ignoreAnchorPointForPosition(false);
-        checks->setContentSize({ boxW, boxH });
-        m_mainLayer->addChildAtPosition(checks, Anchor::Top, { 0.f, -180.f });
-        float rowTop = boxH - 20.f, rowBottom = 20.f;
-        addCheck(checks, 40.f, rowTop, "Completed By", m_completedBy, menu_selector(GSLFilterPopup::onCompleted),
-            "Only levels this player has beaten (victors on the site).\nEmpty name = <cg>your</c> account.");
-        addCheck(checks, 40.f, rowBottom, "Created By", m_createdBy, menu_selector(GSLFilterPopup::onCreated),
-            "Only levels made by this creator.");
+        checks->setPosition({ 0.f, 0.f });
+        m_mainLayer->addChild(checks, 5);
+        auto top = m_mainLayer->getContentSize().height;
+        auto addCheck = [&](float x, char const* text, bool on, SEL_MenuHandler cb, bool enabled) {
+            auto t = CCMenuItemToggler::createWithStandardSprites(this, cb, .55f);
+            t->toggle(on);
+            t->setEnabled(enabled);
+            if (!enabled) t->setOpacity(100);
+            t->setPosition({ x, top - 138.f });
+            checks->addChild(t);
+            auto lbl = CCLabelBMFont::create(text, "bigFont.fnt");
+            lbl->setScale(.35f);
+            lbl->setAnchorPoint({ 0.f, .5f });
+            lbl->setPosition({ x + 13.f, top - 138.f });
+            if (!enabled) lbl->setOpacity(100);
+            checks->addChild(lbl);
+        };
+        addCheck(28.f, "Only new", m_onlyNew && hasNew, menu_selector(GSLFilterPopup::onNew), hasNew);
+        addCheck(130.f, "Completed by", m_completedBy, menu_selector(GSLFilterPopup::onCompleted), true);
+        addCheck(290.f, "Created by", m_createdBy, menu_selector(GSLFilterPopup::onCreated), true);
 
-        float inputW = 150.f;
-        float inputX = boxW / 2 - inputW / 2 - 30.f;
-        m_victorInput = TextInput::create(inputW, "Username", "bigFont.fnt");
+        m_victorInput = TextInput::create(150.f, "Username", "bigFont.fnt");
         m_victorInput->setString(m_layer->m_victor);
-        m_mainLayer->addChildAtPosition(m_victorInput, Anchor::Top, { inputX, -180.f + boxH / 2 - 20.f });
-        m_creatorInput = TextInput::create(inputW, "Creator Name", "bigFont.fnt");
+        m_victorInput->setScale(.55f);
+        m_mainLayer->addChildAtPosition(m_victorInput, Anchor::TopLeft, { 182.f, -160.f });
+        m_creatorInput = TextInput::create(150.f, "Creator Name", "bigFont.fnt");
         m_creatorInput->setString(m_layer->m_creator);
-        m_mainLayer->addChildAtPosition(m_creatorInput, Anchor::Top, { inputX, -180.f - boxH / 2 + 20.f });
+        m_creatorInput->setScale(.55f);
+        m_mainLayer->addChildAtPosition(m_creatorInput, Anchor::TopLeft, { 336.f, -160.f });
 
-        // Apply
+        // Quality · Sort by
+        m_qualityLabel = selector(-100.f, -200.f, "Quality",
+            menu_selector(GSLFilterPopup::onQualityPrev), menu_selector(GSLFilterPopup::onQualityNext));
+        m_sortLabel = selector(100.f, -200.f, "Sort by",
+            menu_selector(GSLFilterPopup::onSortPrev), menu_selector(GSLFilterPopup::onSortNext));
+
         auto spr = ButtonSprite::create("Apply", "goldFont.fnt", "GJ_button_01.png", .9f);
         auto apply = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLFilterPopup::onApply));
-        m_buttonMenu->addChildAtPosition(apply, Anchor::Bottom, { 0.f, 26.f });
+        m_buttonMenu->addChildAtPosition(apply, Anchor::Bottom, { 0.f, 24.f });
 
-        updateLabels();
+        refresh();
         return true;
     }
 
-    static bool isPresetRank(int r) { return r == 0 || r == 75 || r == 150 || r == 300; }
-
-    void updateLabels() {
-        ccColor3B on = { 255, 255, 255 }, off = { 120, 120, 120 };
-        for (auto& [val, lbl] : m_rankLabels) {
-            bool sel = val == CUSTOM ? !isPresetRank(m_rank) : val == m_rank;
-            lbl->setColor(sel ? on : off);
-        }
-        for (auto& [val, lbl] : m_lengthLabels) {
-            bool sel = val == CUSTOM ? (m_lengthMask & ~PRESET_LENGTHS) != 0 : (m_lengthMask & val) != 0;
-            lbl->setColor(sel ? on : off);
+    static char const* sortName(int s) {
+        switch (s) {
+            case 1: return "Reverse rank";
+            case 2: return "Name A-Z";
+            case 3: return "Points";
+            default: return "List rank";
         }
     }
 
-    void openCustomRank() {
-        Ref<GSLFilterPopup> self = this;
-        GSLNumberPopup::create("Custom top", isPresetRank(m_rank) ? 0 : m_rank, [self](int v) {
-            self->m_rank = v;
-            self->updateLabels();
-        })->show();
-    }
-    void openCustomLength() {
-        Ref<GSLFilterPopup> self = this;
-        GSLLengthPopup::create(m_lengthMask, [self](int mask) {
-            self->m_lengthMask = mask;
-            self->updateLabels();
-        })->show();
+    void refresh() {
+        for (auto& [val, spr] : m_categoryBtns)
+            spr->updateBGImage(val == m_category ? "GJ_button_01.png" : "GJ_button_04.png");
+        for (auto& [val, spr] : m_lengthBtns)
+            spr->updateBGImage(val == m_length ? "GJ_button_01.png" : "GJ_button_04.png");
+        m_qualityLabel->setString(m_quality.empty()
+            ? (m_qualities.size() > 1 ? "All quality tiers" : "No data") : m_quality.c_str());
+        m_qualityLabel->limitLabelWidth(120.f, .4f, .1f);
+        m_sortLabel->setString(sortName(m_sort));
+        m_sortLabel->limitLabelWidth(120.f, .4f, .1f);
     }
 
-    void onRank(CCObject* sender) {
-        int v = sender->getTag();
-        if (v == CUSTOM) return openCustomRank();
-        m_rank = v;
-        updateLabels();
+    void onCategory(CCObject* s) { m_category = m_categories[static_cast<size_t>(s->getTag())]; refresh(); }
+    void onLength(CCObject* s) {
+        static int const vals[] = { 0, 1 << 2, 1 << 3, 1 << 4 };
+        m_length = vals[s->getTag()];
+        refresh();
     }
-    void onRankGear(CCObject*) { openCustomRank(); }
-    void onLength(CCObject* sender) {
-        int v = sender->getTag();
-        if (v == CUSTOM) return openCustomLength();
-        m_lengthMask ^= v;
-        updateLabels();
+    void stepQuality(int d) {
+        auto it = std::find(m_qualities.begin(), m_qualities.end(), m_quality);
+        int i = it == m_qualities.end() ? 0 : static_cast<int>(it - m_qualities.begin());
+        int n = static_cast<int>(m_qualities.size());
+        m_quality = m_qualities[static_cast<size_t>(((i + d) % n + n) % n)];
+        refresh();
     }
-    void onLengthGear(CCObject*) { openCustomLength(); }
-
+    void onQualityPrev(CCObject*) { stepQuality(-1); }
+    void onQualityNext(CCObject*) { stepQuality(1); }
+    void onSortPrev(CCObject*) { m_sort = (m_sort + 3) % 4; refresh(); }
+    void onSortNext(CCObject*) { m_sort = (m_sort + 1) % 4; refresh(); }
+    void onNew(CCObject*) { m_onlyNew = !m_onlyNew; }
     void onCompleted(CCObject*) { m_completedBy = !m_completedBy; }
     void onCreated(CCObject*) { m_createdBy = !m_createdBy; }
 
-    void onInfo(CCObject* sender) {
-        auto text = static_cast<CCString*>(static_cast<CCNode*>(sender)->getUserObject("info"));
-        FLAlertLayer::create("Info", text ? text->getCString() : "", "OK")->show();
-    }
-
     void onApply(CCObject*) {
-        m_layer->m_rankLimit = m_rank;
-        m_layer->m_lengthMask = m_lengthMask;
+        m_layer->m_category = m_category;
+        m_layer->m_lengthMask = m_length;
+        m_layer->m_onlyNew = m_onlyNew;
+        m_layer->m_quality = m_quality;
+        m_layer->m_sort = m_sort;
         m_layer->m_completedBy = m_completedBy;
         m_layer->m_victor = m_victorInput->getString();
         m_layer->m_onlyCreator = m_createdBy;
@@ -811,7 +756,8 @@ void GSLListLayer::onSite(CCObject*) {
 void GSLListLayer::onFilter(CCObject*) { GSLFilterPopup::create(this)->show(); }
 
 void GSLListLayer::applyFilters() {
-    bool active = m_rankLimit > 0 || m_lengthMask != 0 || m_completedBy
+    bool active = !m_category.empty() || !m_quality.empty() || m_onlyNew || m_sort != 0
+        || m_lengthMask != 0 || m_completedBy
         || (m_onlyCreator && !m_creator.empty());
     // серая воронка = фильтр включён
     m_filterBg->setColor(active ? ccColor3B{ 150, 150, 150 } : ccColor3B{ 255, 255, 255 });
@@ -831,7 +777,9 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
     std::vector<GSLEntry> out;
     for (auto& e : m_entries) {
         if (!q.empty() && lower(e.name).find(q) == std::string::npos) continue;
-        if (m_rankLimit > 0 && e.rank > m_rankLimit) continue;
+        if (!m_category.empty() && GSLManager::categoryOf(e) != m_category) continue;
+        if (!m_quality.empty() && e.quality != m_quality) continue;
+        if (m_onlyNew && !e.isNew) continue;
         if (m_onlyCreator && !creator.empty() && lower(e.author).find(creator) == std::string::npos) continue;
         if (m_completedBy) {
             bool beaten = std::any_of(e.victors.begin(), e.victors.end(),
@@ -845,6 +793,10 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
         }
         out.push_back(e);
     }
+    // Sort by (лист и так отсортирован по месту)
+    if (m_sort == 1) std::reverse(out.begin(), out.end());
+    else if (m_sort == 2) std::stable_sort(out.begin(), out.end(), [](auto& a, auto& b) { return lower(a.name) < lower(b.name); });
+    else if (m_sort == 3) std::stable_sort(out.begin(), out.end(), [](auto& a, auto& b) { return a.points > b.points; });
     return out;
 }
 

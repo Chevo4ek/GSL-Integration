@@ -17,6 +17,9 @@ struct GSLEntry {
     int levelId = 0;
     int points = 0;
     std::string rate; // rate уровня в листе (как на сайте), может быть пустым
+    std::string category; // категория с сайта (Main, Extended, ...), может быть пустой
+    std::string quality;  // уровень качества с сайта, может быть пустым
+    bool isNew = false;   // пометка «новый» с сайта
     std::vector<std::string> victors; // ники прошедших
 };
 
@@ -47,6 +50,10 @@ public:
     void rememberLevel(GJGameLevel* level);
     void requestGDInfo(std::vector<int> const& ids, std::function<void()> done);
     bool isLoadingGDInfo() const { return m_gdLoading; }
+
+    // Категория уровня: с сайта, а если её там нет — по месту в листе
+    static std::string categoryOf(GSLEntry const& e);
+    static std::vector<std::string> const& categoryOrder();
 
     static std::string prettyListName(std::string const& list);
     static std::string shortListName(std::string const& list);
