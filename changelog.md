@@ -23,7 +23,7 @@
 - Search bar smoothly hides when you scroll down; a small arrow opens and closes it
 - Square list picker button with a trophy (Classic, Challenge, Spam, Future Classic), trophy and name centered
 - Go to page, randomizer and last page buttons
-- Search filters: Unbounded / Top 75 / 150 / 300 / Custom, length, completed by, created by
+- Filters like on the site: Category (Main / Extended / Advanced / Unbounded), Length, Only new, Quality, Sort by, plus Completed by and Created by
 - Info button with the site description and a link to globalshittylist.com
 - Future Classic: extra note in the info window and an arrow pointing to it until it's read
 

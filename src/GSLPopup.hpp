@@ -39,7 +39,10 @@ protected:
 
 public:
     // фильтры (окно фильтров меняет их и вызывает applyFilters)
-    int m_rankLimit = 0;          // 0 = все, иначе Top N
+    std::string m_category;       // "" = все категории
+    std::string m_quality;        // "" = любое качество
+    bool m_onlyNew = false;
+    int m_sort = 0;               // 0 место, 1 место наоборот, 2 название, 3 очки
     int m_lengthMask = 0;         // биты: 0 Tiny, 1 Short, 2 Medium, 3 Long, 4 XL, 5 Platformer; 0 = любая
     bool m_completedBy = false;
     std::string m_victor;
@@ -47,6 +50,7 @@ public:
     std::string m_creator;
     void applyFilters();
     void selectListPublic(std::string const& list) { selectList(list); }
+    std::string const& currentList() const { return m_list; }
     void goToPage(int page);
     int pageCount() const;
 
