@@ -43,14 +43,21 @@ jobs:
       contents: write
 
     steps:
+      # mod.json нужен для номера версии в latest.json (checkout до combine, чтобы не стереть сборку)
+      - uses: actions/checkout@v4
+
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
 
-      # Контрольная сумма для обновления в игре (кладётся рядом с файлом мода)
+      # Контрольная сумма и latest.json для обновления в игре
       - name: Checksum
         run: |
           cd "${{ steps.build.outputs.build-output }}"
           for f in *.geode; do sha256sum "$f" | cut -d' ' -f1 > "$f.sha256"; done
+          # latest.json для обновления в игре: версия + контрольная сумма
+          ver=$(python3 -c "import json;print(json.load(open('${{ github.workspace }}/mod.json'))['version'])")
+          sum=$(cat *.geode.sha256 | head -1)
+          printf '{\n  "version": "%s",\n  "sha256": "%s"\n}\n' "$ver" "$sum" > latest.json
 
       - uses: actions/upload-artifact@v4
         with:
