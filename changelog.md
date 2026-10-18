@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.2
+<co>Work in progress — not released yet.</c>
+
+- Updates now come from the public GSL-Integration-Releases repository
+
 ## v0.0.1
 <co>Work in progress — not released yet.</c>
 
