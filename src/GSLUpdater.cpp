@@ -5,8 +5,9 @@
 
 using namespace geode::prelude;
 
-// Откуда брать релизы. Репозиторий должен быть публичным, иначе GitHub не отдаст файлы.
-static constexpr auto RELEASES_API = "https://api.github.com/repos/Chevo4ek/GSL-Integration/releases/latest";
+// Откуда брать релизы: отдельный публичный репозиторий только с готовыми файлами
+// (код мода остаётся в приватном).
+static constexpr auto RELEASES_API = "https://api.github.com/repos/Chevo4ek/GSL-Integration-Releases/releases/latest";
 
 static async::TaskHolder<web::WebResponse> s_check, s_sum, s_file;
 static bool s_busy = false;
