@@ -45,6 +45,19 @@ static void install(std::string version, std::string fileUrl, std::string sumUrl
             auto actual = sha256(std::span<uint8_t const>(data.data(), data.size())).toString();
             if (actual != expected) return fail("The downloaded file doesn't match its checksum, nothing was changed.");
 
+            // защита: внутри файла должна быть именно новая версия (не перепутан ли файл в релизе)
+            auto tmp = Mod::get()->getPackagePath();
+            tmp += ".download";
+            if (auto w = file::writeBinary(tmp, data); !w) return fail("Couldn't save the update.");
+            auto meta = ModMetadata::createFromGeodeFile(tmp);
+            std::error_code ec;
+            if (meta.hasErrors() || meta.getID() != Mod::get()->getID()
+                || !(meta.getVersion() > Mod::get()->getVersion())) {
+                std::filesystem::remove(tmp, ec);
+                return fail("The release file is not a newer version of the mod. Nothing was changed.");
+            }
+            std::filesystem::remove(tmp, ec);
+
             auto path = Mod::get()->getPackagePath();
             if (auto w = file::writeBinarySafe(path, data); !w) {
                 return fail(fmt::format("Couldn't save the update: {}", w.unwrapErr()));

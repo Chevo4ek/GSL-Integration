@@ -4,6 +4,7 @@
 <co>Work in progress — not released yet.</c>
 
 - Updates now come from the public GSL-Integration-Releases repository
+- The updater refuses a release file that isn't actually a newer version
 
 ## v0.0.1
 <co>Work in progress — not released yet.</c>
