@@ -12,6 +12,7 @@ This mod brings the <cy>core features</c> of [globalshittylist.com](https://glob
 - <cy>Demon difficulty</c> taken from the list instead of the in-game one (can be turned off)
 - <cy>List points</c> shown in the level stats
 - <cy>List rate</c> (Featured, Epic, ...) shown as the frame around the difficulty face
+- <cy>In-game updates</c> — a new version installs with one button
 - <cy>Live sync</c> — the list updates automatically when the site changes
 
 Short tags: <cy>CL</c> — Classic, <cr>CH</c> — Challenge, <cl>SP</c> — Spam, <cg>FC</c> — Future Classic.

@@ -38,5 +38,8 @@
 ### Platforms
 - Android support (64-bit and 32-bit) next to Windows
 
+### Updates
+- The mod checks for a new version on game start and installs it in one click (verified by checksum, applied after restart)
+
 ### Sync
 - Automatic sync with globalshittylist.com, list cached on disk

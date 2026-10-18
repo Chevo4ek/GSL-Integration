@@ -5,6 +5,7 @@
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include "GSLManager.hpp"
 #include "GSLPopup.hpp"
+#include "GSLUpdater.hpp"
 
 using namespace geode::prelude;
 
@@ -13,6 +14,13 @@ class $modify(GSLMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
         GSLManager::get()->start(); // повторный вызов ничего не делает
+
+        // раз за запуск — проверяем, не вышла ли новая версия мода
+        static bool updateChecked = false;
+        if (!updateChecked && Mod::get()->getSettingValue<bool>("check-updates")) {
+            updateChecked = true;
+            gslCheckForUpdate(false);
+        }
 
         // кнопка GSL спрятана — напоминаем один раз за запуск игры
         static bool reminded = false;

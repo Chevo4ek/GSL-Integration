@@ -146,6 +146,12 @@
 			"description": "Show a notification in game when the Global Shitty List changes on the site.",
 			"type": "bool",
 			"default": true
+		},
+		"check-updates": {
+			"name": "Check for updates",
+			"description": "On game start, check if a new version of the mod is out and offer to install it in one click.",
+			"type": "bool",
+			"default": true
 		}
 	}
 }
