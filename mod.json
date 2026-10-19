@@ -6,7 +6,7 @@
 	},
 	"id": "chevo4ek.gsl-integration",
 	"name": "Global Shitty List Integration",
-	"version": "v0.0.2",
+	"version": "v0.0.3",
 	"developer": "Chevo4ek",
 	"description": "Shows Global Shitty List positions in level search and syncs with globalshittylist.com",
 	"resources": {
@@ -63,7 +63,7 @@
 				"Classic",
 				"Challenge",
 				"Spam",
-				"Future Classic"
+				"Upcoming Levels"
 			]
 		},
 		"search-bar-mode": {

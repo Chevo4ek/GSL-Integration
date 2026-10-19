@@ -123,7 +123,7 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     // убираем наши старые подписи (если вызвали повторно)
     while (auto old = parent->getChildByID("gsl-rank"_spr)) old->removeFromParent();
 
-    // Future Classic — без мест и без смены сложности
+    // Upcoming Levels — без мест и без смены сложности
     std::vector<GSLEntry> entries;
     for (auto& e : all) if (e.list != "future") entries.push_back(e);
     if (entries.empty()) return;

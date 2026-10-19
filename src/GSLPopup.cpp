@@ -468,7 +468,7 @@ bool GSLListLayer::init() {
     infoBtn->setPosition({ 25.f, 25.f });
     menu->addChild(infoBtn);
 
-    // Стрелочка к «i» на Future Classic — пока пояснение не прочитано
+    // Стрелочка к «i» на Upcoming Levels — пока пояснение не прочитано
     m_note = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
     m_note->setScale(.5f);
     m_note->setPosition({ 62.f, 25.f });
@@ -734,7 +734,7 @@ void GSLListLayer::onInfo(CCObject*) {
         "of the Geometry Dash shitty-level scene.";
     bool future = m_list == "future";
     if (future) {
-        text += "\n\n<co>FUTURE CLASSIC:</c> only levels that already have a "
+        text += "\n\n<co>UPCOMING LEVELS:</c> only levels that already have a "
                 "<cy>GD ID</c> are shown here. <co>The full list is on the site!</c>";
     }
     Ref<GSLListLayer> self = this;

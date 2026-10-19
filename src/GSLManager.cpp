@@ -244,7 +244,7 @@ std::string GSLManager::prettyListName(std::string const& list) {
     if (list == "classic") return "Classic";
     if (list == "challenge") return "Challenge";
     if (list == "spam") return "Spam";
-    if (list == "future") return "Future Classic";
+    if (list == "future") return "Upcoming Levels";
     if (list == "future_challenge") return "Future Challenge";
     if (list == "future_spam") return "Future Spam";
     if (list == "impossible") return "Impossible";
@@ -268,7 +268,7 @@ std::string GSLManager::shortListName(std::string const& list) {
     if (list == "classic") return "CL";
     if (list == "challenge") return "CH";
     if (list == "spam") return "SP";
-    if (list == "future") return "FC";
+    if (list == "future") return "UL";
     return list;
 }
 

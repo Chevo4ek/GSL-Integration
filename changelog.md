@@ -1,10 +1,15 @@
 # Changelog
 
+## v0.0.3
+<co>Work in progress — not released yet.</c>
+
+- Future Classic is now called <cg>Upcoming Levels</c> everywhere (short tag <cg>UL</c>)
+- The updater refuses a release file that isn't actually a newer version
+
 ## v0.0.2
 <co>Work in progress — not released yet.</c>
 
 - Updates now come from the public GSL-Integration-Releases repository
-- The updater refuses a release file that isn't actually a newer version
 
 ## v0.0.1
 <co>Work in progress — not released yet.</c>
@@ -27,11 +32,11 @@
 - Search by level name — search bar is part of the list frame, like in the game's own lists
 - The list frame is no longer recreated on every page, so the search text stays
 - Search bar smoothly hides when you scroll down; a small arrow opens and closes it
-- Square list picker button with a trophy (Classic, Challenge, Spam, Future Classic), trophy and name centered
+- Square list picker button with a trophy (Classic, Challenge, Spam, Upcoming Levels), trophy and name centered
 - Go to page, randomizer and last page buttons
 - Filters like on the site: Category (Main / Extended / Advanced / Unbounded), Length, Only new, Quality, Sort by, plus Completed by and Created by
 - Info button with the site description and a link to globalshittylist.com
-- Future Classic: extra note in the info window and an arrow pointing to it until it's read
+- Upcoming Levels: extra note in the info window and an arrow pointing to it until it's read
 
 ### Settings
 - Sections: Display, List screen, Sync
