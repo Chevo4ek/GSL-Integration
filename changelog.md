@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.0.3
+## v0.0.4
 <co>Work in progress — not released yet.</c>
 
 - Future Classic is now called <cg>Upcoming Levels</c> everywhere (short tag <cg>UL</c>)
