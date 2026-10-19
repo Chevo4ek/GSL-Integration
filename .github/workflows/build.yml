@@ -51,6 +51,10 @@ jobs:
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
 
+      # mod.json (номер версии) и changelog.md (описание релиза).
+      # Сборка лежит вне рабочей папки, checkout её не трогает.
+      - uses: actions/checkout@v4
+
       # Контрольная сумма для обновления в игре (кладётся рядом с файлом мода)
       - name: Checksum
         run: |
