@@ -2,6 +2,11 @@ name: Build Geode Mod
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release to GSL-Integration-Releases (version from mod.json)"
+        type: boolean
+        default: false
   push:
     branches: ["**"]
     tags: ["v*"]
@@ -59,15 +64,22 @@ jobs:
           name: GSLIntegration
           path: ${{ steps.build.outputs.build-output }}
 
-      # Тег вида v0.0.3 -> релиз в публичном GSL-Integration-Releases (оттуда мод берёт обновления).
-      # RELEASES_TOKEN — ключ с доступом только к этому репозиторию (Settings → Secrets → Actions).
+      # Релиз в публичном GSL-Integration-Releases (оттуда мод берёт обновления):
+      # Actions → Build Geode Mod → Run workflow → галочка "release". Версия — из mod.json.
+      # RELEASES_TOKEN — ключ с доступом только к тому репозиторию (Settings → Secrets → Actions).
+      - name: Read version
+        id: ver
+        run: echo "version=$(python3 -c "import json;print(json.load(open('mod.json'))['version'])")" >> $GITHUB_OUTPUT
+
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'workflow_dispatch' && inputs.release
         uses: softprops/action-gh-release@v2
         with:
           repository: Chevo4ek/GSL-Integration-Releases
           token: ${{ secrets.RELEASES_TOKEN }}
-          name: GSL Integration ${{ github.ref_name }}
+          tag_name: ${{ steps.ver.outputs.version }}
+          target_commitish: main
+          name: GSL Integration ${{ steps.ver.outputs.version }}
           body_path: changelog.md
           files: |
             ${{ steps.build.outputs.build-output }}/*.geode
