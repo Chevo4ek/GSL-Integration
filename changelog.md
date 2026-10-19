@@ -5,6 +5,7 @@
 
 - Future Classic is now called <cg>Upcoming Levels</c> everywhere (short tag <cg>UL</c>)
 - The updater refuses a release file that isn't actually a newer version
+- New versions are published automatically
 
 ## v0.0.2
 <co>Work in progress — not released yet.</c>

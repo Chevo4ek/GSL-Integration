@@ -59,11 +59,16 @@ jobs:
           name: GSLIntegration
           path: ${{ steps.build.outputs.build-output }}
 
-      # Тег вида v0.0.2 -> релиз (пока выкладывается вручную в GSL-Integration-Releases)
+      # Тег вида v0.0.3 -> релиз в публичном GSL-Integration-Releases (оттуда мод берёт обновления).
+      # RELEASES_TOKEN — ключ с доступом только к этому репозиторию (Settings → Secrets → Actions).
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          repository: Chevo4ek/GSL-Integration-Releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          name: GSL Integration ${{ github.ref_name }}
+          body_path: changelog.md
           files: |
             ${{ steps.build.outputs.build-output }}/*.geode
             ${{ steps.build.outputs.build-output }}/*.geode.sha256
