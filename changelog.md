@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.0.6
+<co>Work in progress — not released yet.</c>
+
+- New filters window like on the GSL site: Creator, Verifier, Level ID, Completed by, Victors (min/max), Rank range, Length, Quality, Favorites, Difficulty, Sort by
+- Clear Filters button
+- Favorites: star on the level page adds the level to your favorites
+- Sort by "Most Victors"
+
 ## v0.0.5
 <co>Work in progress — not released yet.</c>
 

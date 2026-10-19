@@ -129,6 +129,7 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         e.list    = v["list"].asString().unwrapOr("");
         e.name    = v["name"].asString().unwrapOr("?");
         e.author  = v["author"].asString().unwrapOr("");
+        e.verifier = v["verifier"].asString().unwrapOr("");
         e.difficulty = v["difficulty"].asString().unwrapOr("");
         e.rank    = static_cast<int>(v["rank"].asInt().unwrapOr(0));
         e.levelId = static_cast<int>(v["levelId"].asInt().unwrapOr(0));
@@ -385,4 +386,28 @@ void GSLManager::fetchGDChunk() {
             Loader::get()->queueInMainThread([this] { fetchGDChunk(); });
         }
     );
+}
+
+// ---------- избранное ----------
+
+bool GSLManager::isFavorite(int levelId) const {
+    auto fav = Mod::get()->getSavedValue<matjson::Value>("favorites");
+    if (auto arr = fav.asArray()) {
+        for (auto& v : arr.unwrap()) if (v.asInt().unwrapOr(0) == levelId) return true;
+    }
+    return false;
+}
+
+void GSLManager::toggleFavorite(int levelId) {
+    auto fav = Mod::get()->getSavedValue<matjson::Value>("favorites");
+    auto out = matjson::Value::array();
+    bool found = false;
+    if (auto arr = fav.asArray()) {
+        for (auto& v : arr.unwrap()) {
+            if (v.asInt().unwrapOr(0) == levelId) { found = true; continue; }
+            out.push(v);
+        }
+    }
+    if (!found) out.push(levelId);
+    Mod::get()->setSavedValue("favorites", out);
 }

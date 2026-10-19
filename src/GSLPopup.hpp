@@ -48,6 +48,12 @@ public:
     std::string m_victor;
     bool m_onlyCreator = false;
     std::string m_creator;
+    std::string m_verifierFilter;
+    int m_levelIdFilter = 0;
+    int m_victorsMin = 0, m_victorsMax = 0;
+    int m_rankFrom = 0, m_rankTo = 0;
+    bool m_favoritesOnly = false;
+    std::string m_difficulty;     // "" = любая, иначе "Extreme Demon" и т.п.
     void applyFilters();
     void selectListPublic(std::string const& list) { selectList(list); }
     std::string const& currentList() const { return m_list; }

@@ -209,6 +209,30 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         y -= lineH;
     }
 
+    // Звёздочка «в избранное» на странице уровня (для фильтра Favorites)
+    if (fullNames) {
+        int levelId = entries.front().levelId;
+        auto makeStar = [](bool on) {
+            auto spr = CCSprite::createWithSpriteFrameName(on ? "GJ_starsIcon_001.png" : "GJ_starsIcon_gray_001.png");
+            spr->setScale(.8f);
+            return spr;
+        };
+        auto menu = CCMenu::create();
+        menu->setID("gsl-rank"_spr); // удаляется вместе с подписями мест
+        menu->setPosition(parent->convertToNodeSpace({ cx + 64.f, bottom - 7.f }));
+        auto btn = CCMenuItemExt::createSpriteExtra(makeStar(GSLManager::get()->isFavorite(levelId)),
+            [levelId, makeStar](CCMenuItemSpriteExtra* b) {
+                GSLManager::get()->toggleFavorite(levelId);
+                bool on = GSLManager::get()->isFavorite(levelId);
+                b->setNormalImage(makeStar(on));
+                Notification::create(on ? "Added to favorites" : "Removed from favorites",
+                    NotificationIcon::Success, 1.f)->show();
+            });
+        btn->setPosition({ 0.f, 0.f });
+        menu->addChild(btn);
+        parent->addChild(menu, 10);
+    }
+
     if (fullNames && showRate) {
         for (auto& e : entries) {
             if (e.rate.empty() || rateState(e.rate) == GJFeatureState::None) continue;

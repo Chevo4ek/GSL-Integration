@@ -99,8 +99,7 @@ protected:
     }
 };
 
-// Фильтры — как на сайте (Category, Length, Only new, Quality, Sort by),
-// но в стиле GD. Плюс Completed by / Created by.
+// Фильтры — как на сайте GSL: поля с подписями сеткой, внизу Clear Filters / Apply.
 class GSLFilterPopup : public Popup {
 public:
     static GSLFilterPopup* create(GSLListLayer* layer) {
@@ -111,244 +110,193 @@ public:
         return nullptr;
     }
 protected:
+    static constexpr float W = 460.f, H = 285.f;
+    static constexpr int COLS = 4;
+
     GSLListLayer* m_layer = nullptr;
+    TextInput* m_creator = nullptr;
+    TextInput* m_verifier = nullptr;
+    TextInput* m_levelId = nullptr;
+    TextInput* m_victor = nullptr;
+    TextInput* m_victorsMin = nullptr;
+    TextInput* m_victorsMax = nullptr;
+    TextInput* m_rankFrom = nullptr;
+    TextInput* m_rankTo = nullptr;
 
-    // выбранные значения (применяются по Apply)
-    std::string m_category;
-    int m_length = 0; // 0 = все, иначе бит длины
-    bool m_onlyNew = false;
-    std::string m_quality;
-    int m_sort = 0;
-    bool m_completedBy = false, m_createdBy = false;
+    // переключатели «◀ значение ▶»: варианты + выбранный индекс
+    struct Selector { std::vector<std::string> items; int index = 0; CCLabelBMFont* label = nullptr; };
+    Selector m_length, m_quality, m_favorites, m_difficulty, m_sort;
+    std::vector<Selector*> m_selectors;
 
-    std::vector<std::string> m_categories; // "" = All
-    std::vector<std::string> m_qualities;  // "" = All
-    std::vector<std::pair<std::string, ButtonSprite*>> m_categoryBtns;
-    std::vector<std::pair<int, ButtonSprite*>> m_lengthBtns;
-    CCLabelBMFont* m_qualityLabel = nullptr;
-    CCLabelBMFont* m_sortLabel = nullptr;
-    TextInput* m_victorInput = nullptr;
-    TextInput* m_creatorInput = nullptr;
+    float colX(int col) const { float cw = (W - 30.f) / COLS; return 15.f + cw * (col + .5f); }
+    float rowY(int row) const { return H - 52.f - row * 56.f; }
+    float cellW() const { return (W - 30.f) / COLS - 10.f; }
 
-    static constexpr float W = 440.f, H = 290.f;
-
-    CCLabelBMFont* header(char const* text, float y) {
-        auto lbl = CCLabelBMFont::create(text, "goldFont.fnt");
-        lbl->setScale(.45f);
+    void header(int col, int row, char const* text) {
+        auto lbl = CCLabelBMFont::create(text, "bigFont.fnt");
+        lbl->setScale(.32f);
+        lbl->setColor({ 200, 200, 200 });
         lbl->setAnchorPoint({ 0.f, .5f });
-        m_mainLayer->addChildAtPosition(lbl, Anchor::TopLeft, { 18.f, y });
-        return lbl;
+        lbl->setPosition({ colX(col) - cellW() / 2, rowY(row) });
+        m_mainLayer->addChild(lbl);
     }
 
-    CCScale9Sprite* box(float y, float h) {
-        auto bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
-        bg->setColor({ 0, 0, 0 });
-        bg->setOpacity(60);
-        bg->setContentSize({ W - 24.f, h });
-        m_mainLayer->addChildAtPosition(bg, Anchor::Top, { 0.f, y });
-        return bg;
+    TextInput* input(float cx, float y, float w, char const* placeholder, std::string const& value, bool number) {
+        auto in = TextInput::create(w, placeholder, "bigFont.fnt");
+        in->setTextAlign(TextInputAlign::Left);
+        if (number) in->setCommonFilter(CommonFilter::Uint);
+        in->getInputNode()->setLabelPlaceholderScale(.35f);
+        in->getInputNode()->setMaxLabelScale(.35f);
+        in->getBGSprite()->setContentSize({ w * 2, 44.f });
+        in->getBGSprite()->setScale(.5f);
+        in->setString(value);
+        in->setPosition({ cx, y });
+        m_mainLayer->addChild(in);
+        return in;
     }
 
-    // ряд кнопок-«таблеток», слева направо, ужимается, если не помещается
-    template <class T>
-    void chipRow(float y, std::vector<std::pair<T, std::string>> const& items, SEL_MenuHandler cb,
-                 std::vector<std::pair<T, ButtonSprite*>>& out) {
-        auto menu = CCMenu::create();
-        menu->setContentSize({ W - 36.f, 26.f });
-        menu->ignoreAnchorPointForPosition(false);
-        menu->setLayout(RowLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setAutoScale(true));
-        for (size_t i = 0; i < items.size(); i++) {
-            auto spr = ButtonSprite::create(items[i].second.c_str(), "bigFont.fnt", "GJ_button_04.png", .6f);
-            spr->setScale(.6f);
-            auto btn = CCMenuItemSpriteExtra::create(spr, this, cb);
-            btn->setTag(static_cast<int>(i));
-            menu->addChild(btn);
-            out.push_back({ items[i].first, spr });
-        }
-        menu->updateLayout();
-        m_mainLayer->addChildAtPosition(menu, Anchor::Top, { 0.f, y });
+    TextInput* field(int col, int row, char const* title, char const* placeholder, std::string const& value, bool number = false) {
+        header(col, row, title);
+        return input(colX(col), rowY(row) - 18.f, cellW(), placeholder, value, number);
     }
 
-    // «◀ значение ▶» как в настройках GD
-    CCLabelBMFont* selector(float x, float y, char const* title, SEL_MenuHandler prev, SEL_MenuHandler next) {
-        auto t = CCLabelBMFont::create(title, "goldFont.fnt");
-        t->setScale(.4f);
-        m_mainLayer->addChildAtPosition(t, Anchor::Top, { x, y + 14.f });
+    void pair(int col, int row, char const* title, char const* ph1, char const* ph2,
+              std::string const& v1, std::string const& v2, TextInput*& a, TextInput*& b) {
+        header(col, row, title);
+        float w = (cellW() - 6.f) / 2;
+        a = input(colX(col) - (w + 6.f) / 2, rowY(row) - 18.f, w, ph1, v1, true);
+        b = input(colX(col) + (w + 6.f) / 2, rowY(row) - 18.f, w, ph2, v2, true);
+    }
 
+    void selector(int col, int row, char const* title, Selector& s) {
+        header(col, row, title);
+        float y = rowY(row) - 18.f;
         auto bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
         bg->setColor({ 0, 0, 0 });
         bg->setOpacity(90);
-        bg->setContentSize({ 150.f, 24.f });
-        m_mainLayer->addChildAtPosition(bg, Anchor::Top, { x, y - 4.f });
-
-        auto value = CCLabelBMFont::create("", "bigFont.fnt");
-        m_mainLayer->addChildAtPosition(value, Anchor::Top, { x, y - 4.f });
+        bg->setContentSize({ cellW() - 28.f, 22.f });
+        bg->setPosition({ colX(col), y });
+        m_mainLayer->addChild(bg);
+        s.label = CCLabelBMFont::create("", "bigFont.fnt");
+        s.label->setPosition({ colX(col), y });
+        m_mainLayer->addChild(s.label);
 
         auto menu = CCMenu::create();
         menu->setPosition({ 0.f, 0.f });
-        auto mk = [&](bool flip, SEL_MenuHandler cb, float dx) {
-            auto a = CCSprite::createWithSpriteFrameName("GJ_arrow_01_001.png");
-            a->setScale(.35f);
-            a->setFlipX(flip);
-            auto b = CCMenuItemSpriteExtra::create(a, this, cb);
-            // те же координаты, что у Anchor::Top: середина сверху + смещение
-            b->setPosition({ W / 2 + x + dx, H + y - 4.f });
-            menu->addChild(b);
-        };
-        mk(false, prev, -88.f);
-        mk(true, next, 88.f);
         m_mainLayer->addChild(menu, 5);
-        return value;
+        int tag = static_cast<int>(m_selectors.size());
+        m_selectors.push_back(&s);
+        for (int dir : { -1, 1 }) {
+            auto a = CCSprite::createWithSpriteFrameName("GJ_arrow_01_001.png");
+            a->setScale(.3f);
+            a->setFlipX(dir > 0);
+            auto b = CCMenuItemSpriteExtra::create(a, this, menu_selector(GSLFilterPopup::onStep));
+            b->setTag(tag * 2 + (dir > 0 ? 1 : 0));
+            b->setPosition({ colX(col) + dir * (cellW() / 2 - 6.f), y });
+            menu->addChild(b);
+        }
     }
+
+    static int indexOf(std::vector<std::string> const& v, std::string const& x) {
+        auto it = std::find(v.begin(), v.end(), x);
+        return it == v.end() ? 0 : static_cast<int>(it - v.begin());
+    }
+    static std::string num(int v) { return v > 0 ? std::to_string(v) : ""; }
 
     bool init() {
         if (!Popup::init(W, H)) return false;
         this->setTitle("Filters", "goldFont.fnt", .9f);
+        auto L = m_layer;
 
-        m_category = m_layer->m_category;
-        m_length = m_layer->m_lengthMask;
-        m_onlyNew = m_layer->m_onlyNew;
-        m_quality = m_layer->m_quality;
-        m_sort = m_layer->m_sort;
-        m_completedBy = m_layer->m_completedBy;
-        m_createdBy = m_layer->m_onlyCreator;
+        // Ряд 1: текстовые поля
+        m_creator  = field(0, 0, "CREATOR", "Author Name", L->m_creator);
+        m_verifier = field(1, 0, "VERIFIER", "Verifier Name", L->m_verifierFilter);
+        m_levelId  = field(2, 0, "LEVEL ID", "Level ID", num(L->m_levelIdFilter), true);
+        m_victor   = field(3, 0, "COMPLETED BY", "Username", L->m_victor);
 
-        // варианты берём из самого листа: какие категории/качества реально есть
-        auto list = GSLManager::get()->getList(m_layer->currentList());
-        m_categories.push_back("");
-        for (auto& c : GSLManager::categoryOrder()) {
-            if (std::any_of(list.begin(), list.end(), [&](auto& e) { return GSLManager::categoryOf(e) == c; }))
-                m_categories.push_back(c);
-        }
-        for (auto& e : list) {
-            auto c = GSLManager::categoryOf(e);
-            if (std::find(m_categories.begin(), m_categories.end(), c) == m_categories.end()) m_categories.push_back(c);
-        }
-        // уровни качества по порядку (Rated → Mythic), только те, что есть в листе
-        m_qualities.push_back("");
-        for (auto& q : GSLManager::qualityOrder()) {
-            if (std::any_of(list.begin(), list.end(), [&](auto& e) { return e.quality == q; }))
-                m_qualities.push_back(q);
-        }
-        for (auto& e : list) {
-            if (!e.quality.empty() && std::find(m_qualities.begin(), m_qualities.end(), e.quality) == m_qualities.end())
-                m_qualities.push_back(e.quality);
-        }
-        bool hasNew = std::any_of(list.begin(), list.end(), [](auto& e) { return e.isNew; });
+        // Ряд 2: диапазоны, длина, качество
+        pair(0, 1, "VICTORS", "Min", "Max", num(L->m_victorsMin), num(L->m_victorsMax), m_victorsMin, m_victorsMax);
+        pair(1, 1, "RANK RANGE", "# Start", "# End", num(L->m_rankFrom), num(L->m_rankTo), m_rankFrom, m_rankTo);
+        m_length.items = { "All Lengths", "Tiny", "Short", "Medium", "Long", "XL", "Platformer" };
+        for (int i = 0; i < 6; i++) if (L->m_lengthMask == (1 << i)) m_length.index = i + 1;
+        selector(2, 1, "LENGTH", m_length);
 
-        // CATEGORY
-        header("CATEGORY", -36.f);
-        std::vector<std::pair<std::string, std::string>> cats;
-        for (auto& c : m_categories) cats.push_back({ c, c.empty() ? "All" : c });
-        chipRow(-56.f, cats, menu_selector(GSLFilterPopup::onCategory), m_categoryBtns);
+        auto list = GSLManager::get()->getList(L->currentList());
+        m_quality.items = { "All Qualities" };
+        for (auto& q : GSLManager::qualityOrder())
+            if (std::any_of(list.begin(), list.end(), [&](auto& e) { return e.quality == q; })) m_quality.items.push_back(q);
+        m_quality.index = L->m_quality.empty() ? 0 : indexOf(m_quality.items, L->m_quality);
+        selector(3, 1, "QUALITY", m_quality);
 
-        // LENGTH
-        header("LENGTH", -80.f);
-        std::vector<std::pair<int, std::string>> lens = {
-            { 0, "All lengths" }, { 1 << 2, "Medium" }, { 1 << 3, "Long" }, { 1 << 4, "XL" }
-        };
-        chipRow(-100.f, lens, menu_selector(GSLFilterPopup::onLength), m_lengthBtns);
+        // Ряд 3: избранное, сложность, сортировка
+        m_favorites.items = { "All", "Favorites Only" };
+        m_favorites.index = L->m_favoritesOnly ? 1 : 0;
+        selector(0, 2, "FAVORITES", m_favorites);
+        m_difficulty.items = { "All Difficulties", "Easy", "Normal", "Hard", "Harder", "Insane",
+            "Easy Demon", "Medium Demon", "Hard Demon", "Insane Demon", "Extreme Demon" };
+        m_difficulty.index = L->m_difficulty.empty() ? 0 : indexOf(m_difficulty.items, L->m_difficulty);
+        selector(1, 2, "DIFFICULTY", m_difficulty);
+        m_sort.items = { "List Rank", "Reverse Rank", "Name A-Z", "Most Victors" };
+        m_sort.index = std::clamp(L->m_sort, 0, 3);
+        selector(2, 2, "SORT BY", m_sort);
 
-        // Only new · Completed by · Created by
-        box(-138.f, 40.f);
-        auto checks = CCMenu::create();
-        checks->setPosition({ 0.f, 0.f });
-        m_mainLayer->addChild(checks, 5);
-        auto top = m_mainLayer->getContentSize().height;
-        auto addCheck = [&](float x, char const* text, bool on, SEL_MenuHandler cb, bool enabled) {
-            auto t = CCMenuItemToggler::createWithStandardSprites(this, cb, .55f);
-            t->toggle(on);
-            t->setEnabled(enabled);
-            if (!enabled) t->setOpacity(100);
-            t->setPosition({ x, top - 138.f });
-            checks->addChild(t);
-            auto lbl = CCLabelBMFont::create(text, "bigFont.fnt");
-            lbl->setScale(.35f);
-            lbl->setAnchorPoint({ 0.f, .5f });
-            lbl->setPosition({ x + 13.f, top - 138.f });
-            if (!enabled) lbl->setOpacity(100);
-            checks->addChild(lbl);
-        };
-        addCheck(28.f, "Only new", m_onlyNew && hasNew, menu_selector(GSLFilterPopup::onNew), hasNew);
-        addCheck(130.f, "Completed by", m_completedBy, menu_selector(GSLFilterPopup::onCompleted), true);
-        addCheck(290.f, "Created by", m_createdBy, menu_selector(GSLFilterPopup::onCreated), true);
-
-        m_victorInput = TextInput::create(150.f, "Username", "bigFont.fnt");
-        m_victorInput->setString(m_layer->m_victor);
-        m_victorInput->setScale(.55f);
-        m_mainLayer->addChildAtPosition(m_victorInput, Anchor::TopLeft, { 182.f, -160.f });
-        m_creatorInput = TextInput::create(150.f, "Creator Name", "bigFont.fnt");
-        m_creatorInput->setString(m_layer->m_creator);
-        m_creatorInput->setScale(.55f);
-        m_mainLayer->addChildAtPosition(m_creatorInput, Anchor::TopLeft, { 336.f, -160.f });
-
-        // Quality · Sort by
-        m_qualityLabel = selector(-100.f, -200.f, "Quality",
-            menu_selector(GSLFilterPopup::onQualityPrev), menu_selector(GSLFilterPopup::onQualityNext));
-        m_sortLabel = selector(100.f, -200.f, "Sort by",
-            menu_selector(GSLFilterPopup::onSortPrev), menu_selector(GSLFilterPopup::onSortNext));
-
-        auto spr = ButtonSprite::create("Apply", "goldFont.fnt", "GJ_button_01.png", .9f);
-        auto apply = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLFilterPopup::onApply));
-        m_buttonMenu->addChildAtPosition(apply, Anchor::Bottom, { 0.f, 24.f });
+        // Кнопки
+        auto clearSpr = ButtonSprite::create("Clear Filters", "goldFont.fnt", "GJ_button_04.png", .8f);
+        clearSpr->setScale(.8f);
+        auto clear = CCMenuItemSpriteExtra::create(clearSpr, this, menu_selector(GSLFilterPopup::onClear));
+        m_buttonMenu->addChildAtPosition(clear, Anchor::Bottom, { -75.f, 26.f });
+        auto applySpr = ButtonSprite::create("Apply", "goldFont.fnt", "GJ_button_01.png", .9f);
+        auto apply = CCMenuItemSpriteExtra::create(applySpr, this, menu_selector(GSLFilterPopup::onApply));
+        m_buttonMenu->addChildAtPosition(apply, Anchor::Bottom, { 75.f, 26.f });
 
         refresh();
         return true;
     }
 
-    static char const* sortName(int s) {
-        switch (s) {
-            case 1: return "Reverse rank";
-            case 2: return "Name A-Z";
-            case 3: return "Points";
-            default: return "List rank";
+    void refresh() {
+        for (auto s : m_selectors) {
+            s->label->setString(s->items[static_cast<size_t>(s->index)].c_str());
+            s->label->limitLabelWidth(cellW() - 36.f, .35f, .1f);
         }
     }
 
-    void refresh() {
-        for (auto& [val, spr] : m_categoryBtns)
-            spr->updateBGImage(val == m_category ? "GJ_button_01.png" : "GJ_button_04.png");
-        for (auto& [val, spr] : m_lengthBtns)
-            spr->updateBGImage(val == m_length ? "GJ_button_01.png" : "GJ_button_04.png");
-        m_qualityLabel->setString(m_quality.empty()
-            ? (m_qualities.size() > 1 ? "All quality tiers" : "No data") : m_quality.c_str());
-        m_qualityLabel->limitLabelWidth(120.f, .4f, .1f);
-        m_sortLabel->setString(sortName(m_sort));
-        m_sortLabel->limitLabelWidth(120.f, .4f, .1f);
+    void onStep(CCObject* sender) {
+        auto tag = sender->getTag();
+        auto s = m_selectors[static_cast<size_t>(tag / 2)];
+        int n = static_cast<int>(s->items.size());
+        s->index = ((s->index + (tag % 2 ? 1 : -1)) % n + n) % n;
+        refresh();
     }
 
-    void onCategory(CCObject* s) { m_category = m_categories[static_cast<size_t>(s->getTag())]; refresh(); }
-    void onLength(CCObject* s) {
-        static int const vals[] = { 0, 1 << 2, 1 << 3, 1 << 4 };
-        m_length = vals[s->getTag()];
+    void onClear(CCObject*) {
+        for (auto in : { m_creator, m_verifier, m_levelId, m_victor, m_victorsMin, m_victorsMax, m_rankFrom, m_rankTo })
+            in->setString("");
+        for (auto s : m_selectors) s->index = 0;
         refresh();
     }
-    void stepQuality(int d) {
-        auto it = std::find(m_qualities.begin(), m_qualities.end(), m_quality);
-        int i = it == m_qualities.end() ? 0 : static_cast<int>(it - m_qualities.begin());
-        int n = static_cast<int>(m_qualities.size());
-        m_quality = m_qualities[static_cast<size_t>(((i + d) % n + n) % n)];
-        refresh();
-    }
-    void onQualityPrev(CCObject*) { stepQuality(-1); }
-    void onQualityNext(CCObject*) { stepQuality(1); }
-    void onSortPrev(CCObject*) { m_sort = (m_sort + 3) % 4; refresh(); }
-    void onSortNext(CCObject*) { m_sort = (m_sort + 1) % 4; refresh(); }
-    void onNew(CCObject*) { m_onlyNew = !m_onlyNew; }
-    void onCompleted(CCObject*) { m_completedBy = !m_completedBy; }
-    void onCreated(CCObject*) { m_createdBy = !m_createdBy; }
+
+    static int toInt(TextInput* in) { return std::atoi(in->getString().c_str()); }
 
     void onApply(CCObject*) {
-        m_layer->m_category = m_category;
-        m_layer->m_lengthMask = m_length;
-        m_layer->m_onlyNew = m_onlyNew;
-        m_layer->m_quality = m_quality;
-        m_layer->m_sort = m_sort;
-        m_layer->m_completedBy = m_completedBy;
-        m_layer->m_victor = m_victorInput->getString();
-        m_layer->m_onlyCreator = m_createdBy;
-        m_layer->m_creator = m_creatorInput->getString();
-        m_layer->applyFilters();
+        auto L = m_layer;
+        L->m_creator = m_creator->getString();
+        L->m_onlyCreator = !L->m_creator.empty();
+        L->m_verifierFilter = m_verifier->getString();
+        L->m_levelIdFilter = toInt(m_levelId);
+        L->m_victor = m_victor->getString();
+        L->m_completedBy = !L->m_victor.empty();
+        L->m_victorsMin = toInt(m_victorsMin);
+        L->m_victorsMax = toInt(m_victorsMax);
+        L->m_rankFrom = toInt(m_rankFrom);
+        L->m_rankTo = toInt(m_rankTo);
+        L->m_lengthMask = m_length.index == 0 ? 0 : 1 << (m_length.index - 1);
+        L->m_quality = m_quality.index == 0 ? "" : m_quality.items[static_cast<size_t>(m_quality.index)];
+        L->m_favoritesOnly = m_favorites.index == 1;
+        L->m_difficulty = m_difficulty.index == 0 ? "" : m_difficulty.items[static_cast<size_t>(m_difficulty.index)];
+        L->m_sort = m_sort.index;
+        L->m_category.clear();
+        L->m_onlyNew = false;
+        L->applyFilters();
         this->onClose(nullptr);
     }
 };
@@ -763,6 +711,8 @@ void GSLListLayer::onFilter(CCObject*) { GSLFilterPopup::create(this)->show(); }
 
 void GSLListLayer::applyFilters() {
     bool active = !m_category.empty() || !m_quality.empty() || m_onlyNew || m_sort != 0
+        || !m_verifierFilter.empty() || m_levelIdFilter || m_victorsMin || m_victorsMax
+        || m_rankFrom || m_rankTo || m_favoritesOnly || !m_difficulty.empty()
         || m_lengthMask != 0 || m_completedBy
         || (m_onlyCreator && !m_creator.empty());
     // серая воронка = фильтр включён
@@ -771,10 +721,19 @@ void GSLListLayer::applyFilters() {
     loadPage();
 }
 
+// "extreme_demon" -> "Extreme Demon" (как в окне фильтров)
+static std::string difficultyName(std::string d) {
+    for (auto& c : d) c = (c == '_' || c == '-') ? ' ' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    bool up = true;
+    for (auto& c : d) { if (up) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c))); up = c == ' '; }
+    return d;
+}
+
 // useGD = false — без фильтров по длине/звёздам (чтобы узнать, чьи данные докачать)
 std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
     auto q = lower(m_query);
     auto creator = lower(m_creator);
+    auto verifier = lower(m_verifierFilter);
     std::string victor = m_victor;
     if (m_completedBy && victor.empty()) victor = GJAccountManager::get()->m_username;
     victor = lower(victor);
@@ -786,6 +745,14 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
         if (!m_category.empty() && GSLManager::categoryOf(e) != m_category) continue;
         if (!m_quality.empty() && e.quality != m_quality) continue;
         if (m_onlyNew && !e.isNew) continue;
+        if (!verifier.empty() && lower(e.verifier).find(verifier) == std::string::npos) continue;
+        if (m_levelIdFilter > 0 && e.levelId != m_levelIdFilter) continue;
+        if (m_victorsMin > 0 && static_cast<int>(e.victors.size()) < m_victorsMin) continue;
+        if (m_victorsMax > 0 && static_cast<int>(e.victors.size()) > m_victorsMax) continue;
+        if (m_rankFrom > 0 && e.rank < m_rankFrom) continue;
+        if (m_rankTo > 0 && e.rank > m_rankTo) continue;
+        if (m_favoritesOnly && !gsl->isFavorite(e.levelId)) continue;
+        if (!m_difficulty.empty() && difficultyName(e.difficulty) != m_difficulty) continue;
         if (m_onlyCreator && !creator.empty() && lower(e.author).find(creator) == std::string::npos) continue;
         if (m_completedBy) {
             bool beaten = std::any_of(e.victors.begin(), e.victors.end(),
@@ -802,7 +769,7 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
     // Sort by (лист и так отсортирован по месту)
     if (m_sort == 1) std::reverse(out.begin(), out.end());
     else if (m_sort == 2) std::stable_sort(out.begin(), out.end(), [](auto& a, auto& b) { return lower(a.name) < lower(b.name); });
-    else if (m_sort == 3) std::stable_sort(out.begin(), out.end(), [](auto& a, auto& b) { return a.points > b.points; });
+    else if (m_sort == 3) std::stable_sort(out.begin(), out.end(), [](auto& a, auto& b) { return a.victors.size() > b.victors.size(); });
     return out;
 }
 
