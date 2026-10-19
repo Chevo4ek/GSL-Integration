@@ -37,8 +37,6 @@ jobs:
         uses: geode-sdk/build-geode-mod@main
         with:
           sdk: v5.10.1
-          # закреплённая рабочая версия bindings (свежие ломают сборку под 2.2081)
-          bindings-ref: 7967a43dee568ece099641673be53f897ce19f3f
           combine: true
           target: ${{ matrix.config.target }}
 
