@@ -16,6 +16,7 @@ struct GSLEntry {
     int rank = 0;
     int levelId = 0;
     int points = 0;
+    int requirement = 100; // сколько % нужно для засчёта
     std::string rate; // rate уровня в листе (как на сайте), может быть пустым
     std::string category; // категория с сайта (Main, Extended, ...), может быть пустой
     std::string quality;  // уровень качества с сайта, может быть пустым

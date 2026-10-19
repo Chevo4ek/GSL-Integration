@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.5
+<co>Work in progress — not released yet.</c>
+
+- Levels with the plain "rate" rating keep the normal face without a feature frame
+- "Completed by" only counts players who reached the level's required percent
+
 ## v0.0.4
 <co>Work in progress — not released yet.</c>
 

@@ -133,6 +133,7 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         e.rank    = static_cast<int>(v["rank"].asInt().unwrapOr(0));
         e.levelId = static_cast<int>(v["levelId"].asInt().unwrapOr(0));
         e.points  = static_cast<int>(v["points"].asInt().unwrapOr(0));
+        e.requirement = static_cast<int>(v["requirement"].asInt().unwrapOr(100));
         // rate: число или строка — показываем как есть, без лишних нулей
         if (v.contains("rate")) {
             auto& r = v["rate"];
@@ -167,6 +168,9 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
             for (auto& vic : vs.unwrap()) {
                 std::string name;
                 if (vic.isString()) name = vic.asString().unwrapOr("");
+                // засчитываем только набравших нужный процент (нет процента — считаем пройденным)
+                else if (vic.isObject() && vic.contains("percent")
+                         && vic["percent"].asInt().unwrapOr(100) < e.requirement) continue;
                 else if (vic.isObject()) {
                     for (auto key : { "name", "username", "player", "user", "victor" }) {
                         if (!vic.contains(key)) continue;

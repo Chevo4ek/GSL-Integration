@@ -71,7 +71,7 @@ static std::optional<GJFeatureState> rateState(std::string const& rate) {
     if (r == "epic") return GJFeatureState::Epic;
     if (r == "legendary") return GJFeatureState::Legendary;
     if (r == "mythic") return GJFeatureState::Mythic;
-    if (r == "none" || r == "rated" || r == "unrated" || r == "star" || r == "stars") return GJFeatureState::None;
+    if (r == "rate" || r == "none" || r == "rated" || r == "unrated" || r == "star" || r == "stars") return GJFeatureState::None; // "rate" — просто рейтнут
     return std::nullopt; // неизвестное значение — не трогаем
 }
 
