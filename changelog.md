@@ -4,6 +4,7 @@
 <co>Work in progress — not released yet.</c>
 
 - Levels with the plain "rate" rating keep the normal face without a feature frame
+- Quality filter works: Rated / Featured / Epic / Legendary / Mythic (from the level's rate on the site)
 - "Completed by" only counts players who reached the level's required percent
 
 ## v0.0.4

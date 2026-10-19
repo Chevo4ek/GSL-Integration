@@ -55,6 +55,9 @@ public:
     // Категория уровня: с сайта, а если её там нет — по месту в листе
     static std::string categoryOf(GSLEntry const& e);
     static std::vector<std::string> const& categoryOrder();
+    // Качество уровня = его рейт на сайте: Rated, Featured, Epic, Legendary, Mythic
+    static std::string qualityFromRate(std::string const& rate);
+    static std::vector<std::string> const& qualityOrder();
 
     static std::string prettyListName(std::string const& list);
     static std::string shortListName(std::string const& list);

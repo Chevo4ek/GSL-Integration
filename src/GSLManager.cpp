@@ -159,6 +159,8 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         };
         e.category = str({ "category", "tier", "section", "group" });
         e.quality  = str({ "quality", "qualityTier", "quality_tier", "qualityLevel" });
+        // отдельного поля качества в базе нет — качество = уровень рейта (как на сайте)
+        if (e.quality.empty()) e.quality = qualityFromRate(e.rate);
         for (auto k : { "isNew", "is_new", "new" }) {
             if (v.contains(k) && v[k].isBool()) { e.isNew = v[k].asBool().unwrapOr(false); break; }
         }
@@ -223,6 +225,22 @@ std::vector<GSLEntry> GSLManager::getList(std::string const& list) const {
     for (auto& e : m_all) if (e.list == list) out.push_back(e);
     std::sort(out.begin(), out.end(), [](auto& a, auto& b) { return a.rank < b.rank; });
     return out;
+}
+
+std::string GSLManager::qualityFromRate(std::string const& rate) {
+    std::string r = rate;
+    for (auto& c : r) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (r == "rate" || r == "rated") return "Rated";
+    if (r == "featured") return "Featured";
+    if (r == "epic") return "Epic";
+    if (r == "legendary") return "Legendary";
+    if (r == "mythic") return "Mythic";
+    return "";
+}
+
+std::vector<std::string> const& GSLManager::qualityOrder() {
+    static std::vector<std::string> const order = { "Rated", "Featured", "Epic", "Legendary", "Mythic" };
+    return order;
 }
 
 std::vector<std::string> const& GSLManager::categoryOrder() {

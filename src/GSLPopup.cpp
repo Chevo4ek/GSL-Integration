@@ -224,7 +224,12 @@ protected:
             auto c = GSLManager::categoryOf(e);
             if (std::find(m_categories.begin(), m_categories.end(), c) == m_categories.end()) m_categories.push_back(c);
         }
+        // уровни качества по порядку (Rated → Mythic), только те, что есть в листе
         m_qualities.push_back("");
+        for (auto& q : GSLManager::qualityOrder()) {
+            if (std::any_of(list.begin(), list.end(), [&](auto& e) { return e.quality == q; }))
+                m_qualities.push_back(q);
+        }
         for (auto& e : list) {
             if (!e.quality.empty() && std::find(m_qualities.begin(), m_qualities.end(), e.quality) == m_qualities.end())
                 m_qualities.push_back(e.quality);
