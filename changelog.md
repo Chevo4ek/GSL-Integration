@@ -3,8 +3,7 @@
 ## v0.0.8
 <co>Work in progress — not released yet.</c>
 
-- Fixed a crash when opening the GSL list (built against the wrong Geode bindings)
-- Now built for Geode v5.11.2
+- Fixed a crash when opening the GSL list (Geode's new GD data changed the list type number)
 
 ## v0.0.7
 <co>Work in progress — not released yet.</c>

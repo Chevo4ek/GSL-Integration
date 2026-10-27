@@ -36,10 +36,7 @@ jobs:
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
-          sdk: v5.11.2
-          # bindings той же версии, что в Geode v5.11.2 у игроков. Свежие bindings уже под новую GD
-          # и меняют нумерацию (например, типы списков) — с ними мод вылетает на 2.2081.
-          bindings-ref: 1605f500d053f8de122bf5c7dc6d17c24866e02e
+          sdk: v5.10.1
           combine: true
           target: ${{ matrix.config.target }}
 

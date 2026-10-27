@@ -1,6 +1,6 @@
 # GSL Integration — notes for Claude
 
-Geode SDK v5.11.2 (bindings pinned to 1605f500 in build.yml) mod for Geometry Dash 2.2081 (Windows + Android64/Android32). The list id "future" is shown to players as "Upcoming Levels". Sources are in `src/`; the
+Geode SDK v5.10.1 (latest bindings; BoomListType is hardcoded for 2.2081 in GSLPopup.cpp, see LEVEL_LIST) mod for Geometry Dash 2.2081 (Windows + Android64/Android32). The list id "future" is shown to players as "Upcoming Levels". Sources are in `src/`; the
 copies of `.cpp/.hpp` in the repo root are old and not built.
 
 ## Rules

@@ -305,6 +305,13 @@ protected:
 
 // Полоса поиска внутри рамки, над списком (как в Global Demonlist)
 static constexpr float SEARCH_H = 30.f;
+// Тип «список уровней». Свежие bindings Geode уже под новую GD, где нумерация сдвинулась
+// (Level = 4 там означает Achievement в 2.2081 — вылет). В 2.2081 уровни — это 5.
+#if GEODE_COMP_GD_VERSION == 22081
+static auto const LEVEL_LIST = static_cast<BoomListType>(5);
+#else
+static auto const LEVEL_LIST = BoomListType::Level;
+#endif
 // Цвета списка: синий фон карточек и тёмная полоска между ними
 static constexpr ccColor4B LIST_BG = { 0, 80, 200, 255 };
 static constexpr ccColor4B LIST_SEPARATOR = { 0, 40, 120, 255 };
@@ -993,7 +1000,7 @@ void GSLListLayer::rebuildListView(bool keepScroll) {
         old->release();
     }
     float h = LIST_H + (m_searchHidden ? SEARCH_H : 0.f);
-    auto listView = CustomListView::create(m_shownLevels, BoomListType::Level, h, LIST_W);
+    auto listView = CustomListView::create(m_shownLevels, LEVEL_LIST, h, LIST_W);
     listView->retain();
     m_listLayer->addChild(listView, 6, 9);
     m_listLayer->m_listView = listView;
