@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.7
+<co>Work in progress — not released yet.</c>
+
+- "Completed by" also counts the level's verifier (verifications count as completions)
+
 ## v0.0.6
 <co>Work in progress — not released yet.</c>
 

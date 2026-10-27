@@ -755,8 +755,9 @@ std::vector<GSLEntry> GSLListLayer::filtered(bool useGD) const {
         if (!m_difficulty.empty() && difficultyName(e.difficulty) != m_difficulty) continue;
         if (m_onlyCreator && !creator.empty() && lower(e.author).find(creator) == std::string::npos) continue;
         if (m_completedBy) {
-            bool beaten = std::any_of(e.victors.begin(), e.victors.end(),
-                [&](auto& v) { return lower(v) == victor; });
+            // верификация тоже считается прохождением
+            bool beaten = lower(e.verifier) == victor
+                || std::any_of(e.victors.begin(), e.victors.end(), [&](auto& v) { return lower(v) == victor; });
             if (!beaten) continue;
         }
         if (useGD && needsGDInfo()) {
