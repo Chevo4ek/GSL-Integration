@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.10
+<co>Work in progress — not released yet.</c>
+
+- The favorites star on the level page sits right next to the list position and no longer touches the Play button
+
 ## v0.0.9
 <co>Work in progress — not released yet.</c>
 

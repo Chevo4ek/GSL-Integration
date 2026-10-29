@@ -194,6 +194,8 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
 
     float lineH = fullNames ? 14.f : 9.f;
     float y = bottom - (fullNames ? 7.f : 6.f);
+    float firstRight = cx + 40.f; // правый край первой подписи места — к нему прижимаем звёздочку
+    bool firstLabel = true;
     for (auto& e : entries) {
         bool full = Mod::get()->getSettingValue<std::string>("rank-names") == "Full";
         auto str = full
@@ -206,6 +208,7 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         label->setPosition(parent->convertToNodeSpace({ cx, y }));
         label->setID("gsl-rank"_spr);
         parent->addChild(label, 10);
+        if (firstLabel) { firstRight = worldBox(label).getMaxX(); firstLabel = false; }
         y -= lineH;
     }
 
@@ -219,7 +222,7 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         };
         auto menu = CCMenu::create();
         menu->setID("gsl-rank"_spr); // удаляется вместе с подписями мест
-        menu->setPosition(parent->convertToNodeSpace({ cx + 64.f, bottom - 7.f }));
+        menu->setPosition(parent->convertToNodeSpace({ firstRight + 10.f, bottom - 7.f })); // сразу справа от «№1 CL»
         auto btn = CCMenuItemExt::createSpriteExtra(makeStar(GSLManager::get()->isFavorite(levelId)),
             [levelId, makeStar](CCMenuItemSpriteExtra* b) {
                 GSLManager::get()->toggleFavorite(levelId);
