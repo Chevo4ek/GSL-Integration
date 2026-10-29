@@ -400,13 +400,22 @@ class $modify(GSLSearchLayer, LevelSearchLayer) {
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(GSLSearchLayer::onGSL));
         btn->setID("gsl-button"_spr);
 
-        // в правой колонке круглых кнопок, под глобусом
-        auto menu = CCMenu::create();
-        menu->setID("gsl-menu"_spr);
-        menu->addChild(btn);
-        auto win = CCDirector::get()->getWinSize();
-        menu->setPosition({ win.width - 24.f, 53.f });
-        this->addChild(menu, 10);
+        // в общую правую колонку кнопок (её же используют другие моды) —
+        // игра сама расставит кнопки без наложений
+        if (auto column = this->getChildByID("other-filter-menu")) {
+            spr->setScale(.75f);
+            column->addChild(btn);
+            column->updateLayout();
+        }
+        else {
+            // запасной вариант, если колонки нет (без мода node-ids)
+            auto menu = CCMenu::create();
+            menu->setID("gsl-menu"_spr);
+            menu->addChild(btn);
+            auto win = CCDirector::get()->getWinSize();
+            menu->setPosition({ win.width - 24.f, 53.f });
+            this->addChild(menu, 10);
+        }
         return true;
     }
 

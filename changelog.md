@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.9
+<co>Work in progress — not released yet.</c>
+
+- The GSL button in level search joins the side button column, so it no longer overlaps buttons of other mods
+
 ## v0.0.8
 <co>Work in progress — not released yet.</c>
 
