@@ -66,15 +66,36 @@ jobs:
           name: GSLIntegration
           path: ${{ steps.build.outputs.build-output }}
 
-      # Релиз: Actions → Build Geode Mod → Run workflow → галочка "release". Версия — из mod.json.
+      # Релиз: автоматически при пуше в main (если такой версии ещё нет),
+      # или вручную: Actions → Build Geode Mod → Run workflow → галочка "release". Версия — из mod.json.
       # Основное место — этот репозиторий (оттуда мод берёт обновления, ключ не нужен).
       # Копия в старый GSL-Integration-Releases — для тех, у кого мод до v0.0.11.
       - name: Read version
         id: ver
         run: echo "version=$(python3 -c "import json;print(json.load(open('mod.json'))['version'])")" >> $GITHUB_OUTPUT
 
+      # Публиковать ли: ручной запуск с галочкой, или пуш в main с новой версией
+      # (уже выпущенную версию не перезаписываем — поднимите version в mod.json).
+      - name: Decide release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ steps.ver.outputs.version }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.release }}" = "true" ]; then
+            echo "go=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            if gh release view "$VER" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+              echo "Release $VER already exists, skipping"; echo "go=false" >> $GITHUB_OUTPUT
+            else
+              echo "go=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "go=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish release
-        if: github.event_name == 'workflow_dispatch' && inputs.release
+        if: steps.rel.outputs.go == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ver.outputs.version }}
@@ -86,7 +107,7 @@ jobs:
             ${{ steps.build.outputs.build-output }}/*.geode.sha256
 
       - name: Publish release (old repo, for older versions of the mod)
-        if: github.event_name == 'workflow_dispatch' && inputs.release
+        if: steps.rel.outputs.go == 'true'
         continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
