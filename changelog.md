@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.12
+<co>Work in progress — not released yet.</c>
+
+- Test release to check in-game updates
+
 ## v0.0.11
 <co>Work in progress — not released yet.</c>
 
