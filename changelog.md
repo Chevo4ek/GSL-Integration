@@ -5,6 +5,7 @@
 
 - Updates now come from the main GSL-Integration repository
 - New versions are published automatically when changes land in main
+- Repository tidied: original photos moved into resources, old file copies removed
 
 ## v0.0.10
 <co>Work in progress — not released yet.</c>
