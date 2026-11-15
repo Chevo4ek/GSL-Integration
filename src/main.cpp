@@ -3,6 +3,7 @@
 #include <Geode/modify/LevelSearchLayer.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
+#include <Geode/modify/ProfilePage.hpp>
 #include "GSLManager.hpp"
 #include "GSLPopup.hpp"
 #include "GSLUpdater.hpp"
@@ -246,10 +247,87 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
             rate->setPosition(parent->convertToNodeSpace({ cx, y }));
             rate->setID("gsl-rank"_spr); // удаляется вместе с подписями мест
             parent->addChild(rate, 10);
+            y -= lineH;
             break;
         }
     }
+
+    // Очки листа за уровень — под оценкой
+    if (fullNames) {
+        int total = 0;
+        for (auto& e : entries) total += e.points;
+        if (total > 0) {
+            auto pts = CCLabelBMFont::create(fmt::format("{} pts", total).c_str(), "bigFont.fnt");
+            pts->limitLabelWidth(90.f, .35f, .1f);
+            pts->setColor({ 120, 230, 255 });
+            pts->setPosition(parent->convertToNodeSpace({ cx, y }));
+            pts->setID("gsl-rank"_spr);
+            parent->addChild(pts, 10);
+        }
+    }
 }
+
+// Неофициальные очки: уровни листа, пройденные в этом сохранении
+struct GSLProgress { int points = 0; int levels = 0; };
+static GSLProgress localProgress() {
+    GSLProgress res;
+    std::unordered_map<int, std::vector<GSLEntry const*>> byLevel;
+    for (auto& e : GSLManager::get()->allEntries()) {
+        if (e.list == "future" || e.levelId <= 0) continue;
+        byLevel[e.levelId].push_back(&e);
+    }
+    auto glm = GameLevelManager::sharedState();
+    for (auto& [id, list] : byLevel) {
+        auto level = glm->getSavedLevel(id);
+        if (!level) continue;
+        int percent = level->m_normalPercent.value();
+        bool counted = false;
+        for (auto e : list) {
+            if (percent < std::max(1, e->requirement)) continue;
+            res.points += e->points;
+            counted = true;
+        }
+        if (counted) res.levels++;
+    }
+    return res;
+}
+
+class $modify(GSLProfilePage, ProfilePage) {
+    void loadPageFromUserInfo(GJUserScore* score) {
+        ProfilePage::loadPageFromUserInfo(score);
+        if (!score || score->m_accountID != GJAccountManager::get()->m_accountID) return;
+        auto stats = this->m_mainLayer ? this->m_mainLayer->getChildByIDRecursive("stats-menu") : nullptr;
+        if (!stats) return;
+        while (auto old = stats->getChildByID("gsl-stats"_spr)) old->removeFromParent();
+
+        auto p = localProgress();
+        auto node = CCNode::create();
+        auto lbl = CCLabelBMFont::create(fmt::format("{}", p.points).c_str(), "bigFont.fnt");
+        lbl->setScale(.6f);
+        auto icon = CCSprite::createWithSpriteFrameName("currencyOrbIcon_001.png");
+        float w = lbl->getScaledContentSize().width;
+        lbl->setPosition({ w / 2.f, 12.f });
+        node->addChild(lbl);
+        if (icon) {
+            icon->setScale(.9f);
+            icon->setPosition({ w + 4.f + icon->getScaledContentSize().width / 2.f, 12.f });
+            node->addChild(icon);
+            w += 4.f + icon->getScaledContentSize().width;
+        }
+        node->setContentSize({ w, 24.f });
+
+        int pts = p.points, lv = p.levels;
+        auto btn = CCMenuItemExt::createSpriteExtra(node, [pts, lv](CCMenuItemSpriteExtra*) {
+            FLAlertLayer::create("GSL points (unofficial)",
+                fmt::format("<cl>{}</c> points from <cg>{}</c> GSL levels you completed.\n"
+                    "Counted from this save only, not shown on the GSL site.", pts, lv),
+                "OK")->show();
+        });
+        btn->setID("gsl-stats"_spr);
+        stats->addChild(btn);
+        stats->updateLayout();
+    }
+};
 
 static bool isLengthText(std::string const& s) {
     static std::vector<std::string> const names = { "Tiny", "Short", "Medium", "Long", "XL", "Plat." };

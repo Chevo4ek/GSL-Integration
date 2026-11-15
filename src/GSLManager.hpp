@@ -43,6 +43,7 @@ public:
     std::vector<GSLEntry> const* find(int levelId) const;
     // Весь список по имени, отсортированный по месту
     std::vector<GSLEntry> getList(std::string const& list) const;
+    std::vector<GSLEntry> const& allEntries() const { return m_all; }
 
     bool isLoading() const { return m_loading; }
     size_t total() const { return m_all.size(); }

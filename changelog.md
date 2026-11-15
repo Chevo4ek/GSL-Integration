@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.13
+<co>Work in progress — not released yet.</c>
+
+- Level page shows the list points under the rate (e.g. "350 pts")
+- Your profile shows unofficial GSL points for list levels you completed; tap it to see how many levels count (only this save, not on the GSL site)
+
 ## v0.0.12
 <co>Work in progress — not released yet.</c>
 

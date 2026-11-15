@@ -10,7 +10,8 @@ This mod brings the <cy>core features</c> of [globalshittylist.com](https://glob
 - <cy>Filter levels</c> like on the site: creator, verifier, level ID, victors, rank range, length, quality, difficulty, favorites — and <cy>sort</c> them
 - <cy>Level placements</c> from the <cl>Global Shitty List</c> displayed under the difficulty face (e.g. <cy>#1 CL</c>)
 - <cy>Demon difficulty</c> taken from the list instead of the in-game one (can be turned off)
-- <cy>List points</c> shown in the level stats
+- <cy>List points</c> shown in the level stats and under the rate on the level page
+- <cy>Unofficial GSL points</c> on your profile: points and count of list levels you completed (from this save, not shown on the site)
 - <cy>List rate</c> (Featured, Epic, ...) shown as the frame around the difficulty face
 - <cy>In-game updates</c> — a new version installs with one button
 - <cy>Live sync</c> — the list updates automatically when the site changes
