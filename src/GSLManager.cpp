@@ -40,11 +40,12 @@ void GSLManager::forceRefresh() {
 // Изменилось что-то одно — значит, лист обновился (в т.ч. удаление уровня).
 void GSLManager::checkForChanges() {
     if (m_loading) return;
+    m_failed = false;
 
     m_checkListener.spawn(
         web::WebRequest().get(fmt::format("{}/changelog?limit=1", API)),
         [this](web::WebResponse res) {
-            if (!res.ok()) { log::warn("GSL: changelog request failed ({})", res.code()); return; }
+            if (!res.ok()) { log::warn("GSL: changelog request failed ({})", res.code()); m_failed = true; return; }
 
             auto json = res.json().unwrapOr(matjson::Value());
             std::string lastChange;
@@ -55,7 +56,7 @@ void GSLManager::checkForChanges() {
             m_statsListener.spawn(
                 web::WebRequest().get(fmt::format("{}/stats", API)),
                 [this, lastChange](web::WebResponse res) {
-                    if (!res.ok()) { log::warn("GSL: stats request failed ({})", res.code()); return; }
+                    if (!res.ok()) { log::warn("GSL: stats request failed ({})", res.code()); m_failed = true; return; }
 
                     auto json = res.json().unwrapOr(matjson::Value());
                     auto count = json["data"]["levels"].asInt().unwrapOr(-1);
@@ -83,6 +84,7 @@ void GSLManager::fetchPage(int offset) {
             if (!res.ok()) {
                 log::warn("GSL: levels request failed ({})", res.code());
                 m_loading = false;
+                m_failed = true;
                 return;
             }
 

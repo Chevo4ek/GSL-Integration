@@ -91,6 +91,7 @@ protected:
     bool m_searchHidden = false;
     bool m_searchAnimating = false;
     float m_lastScrollY = 0.f;
+    int m_syncState = -1; // пока лист пуст: следим, загрузился он или упал
     float m_scrollAccum = 0.f;
     std::string searchMode() const;
     void setSearchHidden(bool hidden);

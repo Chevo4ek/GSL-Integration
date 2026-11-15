@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.15
+<co>Work in progress — not released yet.</c>
+
+- If the list can't be downloaded (no internet or the site is blocked), the GSL screen says so instead of loading forever; press refresh to try again
+- The GSL screen shows the list as soon as it finishes downloading, no need to reopen it
+
 ## v0.0.14
 <co>Work in progress — not released yet.</c>
 

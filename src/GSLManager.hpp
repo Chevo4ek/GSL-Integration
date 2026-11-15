@@ -46,6 +46,8 @@ public:
     std::vector<GSLEntry> const& allEntries() const { return m_all; }
 
     bool isLoading() const { return m_loading; }
+    // последняя попытка скачать лист не удалась (нет доступа к сайту)
+    bool isFailed() const { return m_failed; }
     size_t total() const { return m_all.size(); }
 
     // Длина/звёзды уровней. requestGDInfo докачивает недостающие и потом зовёт done.
@@ -86,6 +88,7 @@ private:
     std::string m_pendingVersion;
     std::string m_version;
     bool m_loading = false;
+    bool m_failed = false;
     bool m_started = false;
 
     async::TaskHolder<web::WebResponse> m_checkListener;

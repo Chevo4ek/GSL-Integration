@@ -541,6 +541,7 @@ bool GSLListLayer::init() {
 
     m_status = CCLabelBMFont::create("", "bigFont.fnt");
     m_status->setScale(.5f);
+    m_status->setAlignment(kCCTextAlignmentCenter);
     m_status->setPosition({ win.width / 2, midY });
     this->addChild(m_status, 10);
 
@@ -822,7 +823,10 @@ void GSLListLayer::loadPage() {
         showLevels(CCArray::create());
         m_status->setString(
             m_entries.empty()
-                ? (GSLManager::get()->isLoading() ? "Loading list..." : "List not loaded yet")
+                ? (GSLManager::get()->isLoading() ? "Loading list..."
+                    : GSLManager::get()->isFailed()
+                        ? "Can't reach globalshittylist.com\nCheck your internet or VPN,\nthen press the refresh button"
+                        : "Loading list...")
                 : "Nothing found"
         );
         return;
@@ -1064,6 +1068,16 @@ void GSLListLayer::onToggleSearch(CCObject*) {
 // (мелкие движения и дрожание пальца не считаются)
 void GSLListLayer::update(float) {
     if (m_listLayer) styleCells(m_listLayer->m_listView);
+    // лист ещё не скачан — как только скачается или не сможет, обновляем экран
+    if (m_entries.empty()) {
+        auto mgr = GSLManager::get();
+        int state = (mgr->isLoading() ? 1 : 0) | (mgr->isFailed() ? 2 : 0) | (mgr->total() > 0 ? 4 : 0);
+        if (state != m_syncState) {
+            m_syncState = state;
+            if (mgr->total() > 0) selectList(m_list);
+            else loadPage();
+        }
+    }
     if (m_searchAnimating || m_searchHidden || searchMode() != "Hide on scroll") return;
     auto listView = m_listLayer ? m_listLayer->m_listView : nullptr;
     if (!listView || !listView->m_tableView || !listView->m_tableView->m_contentLayer) return;
