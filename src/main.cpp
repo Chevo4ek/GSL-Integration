@@ -51,12 +51,14 @@ static GJDifficultySprite* findDifficulty(CCNode* node) {
 
 // difficulty из API -> кадр мордашки GD и подпись
 static std::pair<int, char const*> demonFrame(std::string d) {
-    for (auto& c : d) c = (c == ' ' || c == '-') ? '_' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    if (d == "easy_demon") return { 7, "Easy Demon" };
-    if (d == "medium_demon") return { 8, "Medium Demon" };
-    if (d == "hard_demon") return { 6, "Hard Demon" };
-    if (d == "insane_demon") return { 9, "Insane Demon" };
-    if (d == "extreme_demon") return { 10, "Extreme Demon" };
+    // с сайта может прийти "Extreme Demon", "extreme_demon", "extremeDemon" или просто "Extreme"
+    std::string k;
+    for (auto c : d) if (std::isalpha(static_cast<unsigned char>(c))) k += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (k.find("extreme") != std::string::npos) return { 10, "Extreme Demon" };
+    if (k.find("insane") != std::string::npos) return { 9, "Insane Demon" };
+    if (k.find("medium") != std::string::npos) return { 8, "Medium Demon" };
+    if (k.find("easy") != std::string::npos) return { 7, "Easy Demon" };
+    if (k.find("hard") != std::string::npos) return { 6, "Hard Demon" };
     return { -1, nullptr };
 }
 
@@ -141,6 +143,7 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
     for (auto n : nodes) {
         auto lbl = typeinfo_cast<CCLabelBMFont*>(n);
         if (!lbl || !lbl->getString() || !isDifficultyText(lbl->getString())) continue;
+        if (lbl->getID() == "gsl-diff"_spr) continue; // наша же подпись
         auto box = worldBox(lbl);
         float d = std::abs(box.getMidX() - cx) + std::abs(box.getMaxY() - diffBox.getMinY());
         if (d < best && d < 80.f) { best = d; diffLabel = lbl; }
@@ -158,6 +161,9 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
         }
         diff->setOpacity(255);
         diff->setVisible(true);
+    }
+    // подпись «Extreme Demon» и т.п. вместо просто «Demon»
+    if (frame > 0) {
         if (diffLabel) {
             while (auto old = diffLabel->getParent()->getChildByID("gsl-diff"_spr)) old->removeFromParent();
             auto own = CCLabelBMFont::create(text, diffLabel->getFntFile());
