@@ -16,7 +16,7 @@ struct GSLEntry {
     std::string difficulty; // easy_demon ... extreme_demon
     int rank = 0;
     int levelId = 0;
-    int points = 0;
+    double points = 0.0;
     int requirement = 100; // сколько % нужно для засчёта
     std::string rate; // rate уровня в листе (как на сайте), может быть пустым
     std::string category; // категория с сайта (Main, Extended, ...), может быть пустой

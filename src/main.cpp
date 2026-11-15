@@ -49,6 +49,14 @@ static GJDifficultySprite* findDifficulty(CCNode* node) {
     return nullptr;
 }
 
+// очки: 12 -> "12", 0.5 -> "0.5", 1.25 -> "1.25" (без лишних нулей, с нулём перед точкой)
+static std::string fmtPoints(double v) {
+    auto s = fmt::format("{:.2f}", v);
+    while (!s.empty() && s.back() == '0') s.pop_back();
+    if (!s.empty() && s.back() == '.') s.pop_back();
+    return s;
+}
+
 // difficulty из API -> кадр мордашки GD и подпись
 static std::pair<int, char const*> demonFrame(std::string d) {
     // с сайта может прийти "Extreme Demon", "extreme_demon", "extremeDemon" или просто "Extreme"
@@ -260,10 +268,10 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
 
     // Очки листа за уровень — под оценкой
     if (fullNames) {
-        int total = 0;
+        double total = 0.0;
         for (auto& e : entries) total += e.points;
-        if (total > 0) {
-            auto pts = CCLabelBMFont::create(fmt::format("{} pts", total).c_str(), "bigFont.fnt");
+        if (total > 0.0) {
+            auto pts = CCLabelBMFont::create(fmt::format("{} pts", fmtPoints(total)).c_str(), "bigFont.fnt");
             pts->limitLabelWidth(90.f, .35f, .1f);
             pts->setColor({ 120, 230, 255 });
             pts->setPosition(parent->convertToNodeSpace({ cx, y }));
@@ -274,7 +282,7 @@ static void applyGSL(CCNode* root, GJDifficultySprite* diff, std::vector<GSLEntr
 }
 
 // Неофициальные очки: уровни листа, пройденные в этом сохранении
-struct GSLProgress { int points = 0; int levels = 0; };
+struct GSLProgress { double points = 0.0; int levels = 0; };
 static GSLProgress localProgress() {
     GSLProgress res;
     std::unordered_map<int, std::vector<GSLEntry const*>> byLevel;
@@ -308,7 +316,7 @@ class $modify(GSLProfilePage, ProfilePage) {
 
         auto p = localProgress();
         auto node = CCNode::create();
-        auto lbl = CCLabelBMFont::create(fmt::format("{}", p.points).c_str(), "bigFont.fnt");
+        auto lbl = CCLabelBMFont::create(fmtPoints(p.points).c_str(), "bigFont.fnt");
         lbl->setScale(.6f);
         auto icon = CCSprite::createWithSpriteFrameName("currencyOrbIcon_001.png");
         float w = lbl->getScaledContentSize().width;
@@ -322,7 +330,7 @@ class $modify(GSLProfilePage, ProfilePage) {
         }
         node->setContentSize({ w, 24.f });
 
-        int pts = p.points, lv = p.levels;
+        auto pts = fmtPoints(p.points); int lv = p.levels;
         auto btn = CCMenuItemExt::createSpriteExtra(node, [pts, lv](CCMenuItemSpriteExtra*) {
             FLAlertLayer::create("GSL points (unofficial)",
                 fmt::format("<cl>{}</c> points from <cg>{}</c> GSL levels you completed.\n"
@@ -413,9 +421,9 @@ static void decorateCell(LevelCell* cell, std::vector<GSLEntry> const& all) {
             pts->addChild(orbs);
             x = 11.f;
         }
-        int total = 0;
+        double total = 0.0;
         for (auto& e : entries) total += e.points;
-        auto lbl = CCLabelBMFont::create(fmt::format("{}", total).c_str(), "bigFont.fnt");
+        auto lbl = CCLabelBMFont::create(fmtPoints(total).c_str(), "bigFont.fnt");
         lbl->setScale(.4f);
         lbl->setAnchorPoint({ 0.f, .5f });
         lbl->setPosition({ x, 0.f });

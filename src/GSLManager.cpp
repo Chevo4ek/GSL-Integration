@@ -133,7 +133,7 @@ void GSLManager::applyLevels(matjson::Value const& arr) {
         e.difficulty = v["difficulty"].asString().unwrapOr("");
         e.rank    = static_cast<int>(v["rank"].asInt().unwrapOr(0));
         e.levelId = static_cast<int>(v["levelId"].asInt().unwrapOr(0));
-        e.points  = static_cast<int>(v["points"].asInt().unwrapOr(0));
+        e.points  = v["points"].asDouble().unwrapOr(0.0);
         e.requirement = static_cast<int>(v["requirement"].asInt().unwrapOr(100));
         // rate: число или строка — показываем как есть, без лишних нулей
         if (v.contains("rate")) {

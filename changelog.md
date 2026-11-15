@@ -4,6 +4,7 @@
 <co>Work in progress — not released yet.</c>
 
 - Demon levels show their full type (Easy / Medium / Hard / Insane / Extreme Demon) instead of just "Demon", also with the face replacement turned off
+- Fractional list points are shown in full (e.g. 0.5 instead of 0)
 
 ## v0.0.13
 <co>Work in progress — not released yet.</c>
