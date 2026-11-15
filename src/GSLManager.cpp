@@ -26,7 +26,15 @@ void GSLManager::start() {
     );
 }
 
+// Во время игры в уровень (и в редакторе) не мешаем — покажем потом
+void GSLManager::showPendingNotify() {
+    if (!m_notifyPending || PlayLayer::get() || LevelEditorLayer::get()) return;
+    m_notifyPending = false;
+    Notification::create("Global Shitty List updated", NotificationIcon::Info)->show();
+}
+
 void GSLManager::tick(float) {
+    showPendingNotify();
     checkForChanges();
 }
 
@@ -108,7 +116,8 @@ void GSLManager::fetchPage(int offset) {
             applyLevels(all);
             m_version = m_pendingVersion;
             if (hadList && Mod::get()->getSettingValue<bool>("notify-updates")) {
-                Notification::create("Global Shitty List updated", NotificationIcon::Info)->show();
+                m_notifyPending = true;
+                showPendingNotify();
             }
             Mod::get()->setSavedValue("cache-levels", all);
             Mod::get()->setSavedValue("cache-version", m_version);

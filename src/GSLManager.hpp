@@ -89,6 +89,8 @@ private:
     std::string m_version;
     bool m_loading = false;
     bool m_failed = false;
+    bool m_notifyPending = false;
+    void showPendingNotify();
     bool m_started = false;
 
     async::TaskHolder<web::WebResponse> m_checkListener;

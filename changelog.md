@@ -5,6 +5,7 @@
 
 - If the list can't be downloaded (no internet or the site is blocked), the GSL screen says so instead of loading forever; press refresh to try again
 - The GSL screen shows the list as soon as it finishes downloading, no need to reopen it
+- The "list updated" notification no longer pops up while you play a level or use the editor — it shows after you leave
 
 ## v0.0.14
 <co>Work in progress — not released yet.</c>
